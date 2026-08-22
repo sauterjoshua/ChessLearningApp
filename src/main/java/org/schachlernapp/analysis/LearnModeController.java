@@ -47,6 +47,19 @@ public class LearnModeController {
         return tally.get(quality);
     }
 
+    /**
+     * Setzt die Session-Statistik auf zuvor gespeicherte Werte (M7-Persistenz).
+     * Unbekannte {@link MoveQuality}-Werte werden ignoriert, fehlende bleiben bei 0 -
+     * robust gegenüber einer älteren/neueren gespeicherten Version.
+     */
+    public void restoreTally(Map<MoveQuality, Integer> savedTally) {
+        for (Map.Entry<MoveQuality, Integer> entry : savedTally.entrySet()) {
+            if (entry.getKey() != null && entry.getValue() != null) {
+                tally.put(entry.getKey(), entry.getValue());
+            }
+        }
+    }
+
     /** Setzt Brett und Session-Statistik auf die Startstellung zurück. */
     public void resetSession() {
         tally.replaceAll((quality, count) -> 0);

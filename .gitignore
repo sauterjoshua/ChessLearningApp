@@ -1,5 +1,7 @@
 ### Maven ###
 target/
+# von maven-shade-plugin generiert (M7-Packaging)
+dependency-reduced-pom.xml
 
 ### Schach-Lernapp: generierte/lokale Daten ###
 # Lichess-Puzzle-CSV (~1GB) und die daraus importierte SQLite-DB - beides lokal

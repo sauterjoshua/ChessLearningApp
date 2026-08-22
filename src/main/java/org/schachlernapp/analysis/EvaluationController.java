@@ -32,6 +32,15 @@ import java.util.function.Consumer;
  * feinere {@link MoveQuality}-Einstufung samt SAN-Zugvorschlag - berechnet aus
  * demselben Vorher/Nachher-Eval-Paar wie der Blunder-Check, ohne einen
  * zusätzlichen Engine-Aufruf auszulösen.</p>
+ *
+ * <p><b>Performance-Hinweis (M7, nur benannt, nicht behoben):</b> {@link #onPositionChanged}
+ * löst für JEDE Positionsänderung eine neue Engine-Anfrage aus - auch für
+ * {@code ChangeReason.PUZZLE} (Lichess-Setup-Zug + automatisch gespielte
+ * Gegenantworten). Beim Laden eines Puzzles entstehen dadurch mindestens zwei
+ * sequenzielle {@code movetimeMs}-Engine-Calls, bevor der User überhaupt
+ * reagieren kann. Ließe sich vermeiden, indem Puzzle-Auto-Züge übersprungen
+ * werden - aktuell bewusst nicht umgesetzt, da der Eval-Balken dadurch auch
+ * während des Puzzles konsistent mitläuft.</p>
  */
 public class EvaluationController {
 

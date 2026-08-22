@@ -2,15 +2,17 @@ package org.schachlernapp.puzzle;
 
 /**
  * Elo-ähnliche Anpassung des User-Ratings anhand von Erfolg/Misserfolg und der
- * Rating-Differenz zum Puzzle. In-Memory (Default 1500) - dauerhafte Persistenz
- * über App-Neustarts hinweg ist nicht Teil von M4.
+ * Rating-Differenz zum Puzzle. In-Memory, wird über {@link org.schachlernapp.progress.ProgressStore}
+ * (M7) persistiert.
  */
 public class PuzzleRatingService {
 
     public static final int DEFAULT_STARTING_RATING = 1500;
     private static final int K_FACTOR = 24;
 
-    private int rating;
+    // volatile: recordResult() läuft auf dem FX-Thread, rating() wird seit M7 zusätzlich
+    // vom JVM-Shutdown-Hook-Thread gelesen (Main.saveProgress() als Fallback beim Beenden).
+    private volatile int rating;
 
     public PuzzleRatingService() {
         this(DEFAULT_STARTING_RATING);

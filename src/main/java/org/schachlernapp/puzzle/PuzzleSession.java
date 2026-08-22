@@ -27,7 +27,7 @@ import java.util.function.Consumer;
  */
 public class PuzzleSession {
 
-    private static final int DEFAULT_RATING_RANGE = 200;
+    public static final int DEFAULT_RATING_RANGE = 200;
 
     private final BoardController boardController;
     private final PuzzleRepository repository;

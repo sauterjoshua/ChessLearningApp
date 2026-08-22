@@ -9,7 +9,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/** JDBC-DAO für die per {@link PuzzleCsvImporter} befüllte SQLite-Datei. */
+/**
+ * JDBC-DAO für die per {@link PuzzleCsvImporter} befüllte SQLite-Datei.
+ *
+ * <p><b>Performance-/Robustheits-Hinweis (M7, nur benannt, nicht behoben):</b>
+ * Nutzt eine einzelne, geteilte {@link Connection} über die gesamte App-Laufzeit.
+ * {@code PuzzleSession.loadNewPuzzleAsync()} startet pro Klick einen eigenen
+ * Hintergrund-Thread - bei sehr schnellem Mehrfach-Klick auf "Neues Puzzle"
+ * könnten mehrere Threads gleichzeitig dieselbe Connection nutzen, was der
+ * SQLite-JDBC-Treiber nicht in jedem Fall als thread-safe garantiert. Eine
+ * spätere Lösung wäre ein Connection-Pool oder eine Synchronisierung der
+ * Zugriffe - für M7 bewusst nicht umgesetzt.</p>
+ */
 public class PuzzleRepository implements AutoCloseable {
 
     /** System-Property zum Überschreiben des DB-Pfads: -Dpuzzles.db.path=/pfad/zu/puzzles.db */

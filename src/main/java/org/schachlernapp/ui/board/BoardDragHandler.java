@@ -17,6 +17,13 @@ import java.util.Set;
  * vollständig an {@link BoardController#tryMove(Square, Square)}. Diese
  * Klasse trifft selbst keine Regel-Entscheidungen - sie zeigt nur an, welche
  * Zielfelder legal sind, und setzt die UI bei einem abgelehnten Zug zurück.
+ *
+ * <p><b>Performance-Hinweis (M7, nur benannt, nicht behoben):</b> {@link #handlePress}
+ * ({@code controller.legalDestinations(...)}) und {@link #handleRelease}
+ * ({@code controller.tryMove(...)}) lösen für denselben Zug je einen eigenen
+ * {@code board.legalMoves()}-Aufruf aus - die volle Zuggenerierung für die
+ * Stellung läuft also zweimal pro Zug. Bei chesslibs Geschwindigkeit
+ * (Submillisekunden) nicht spürbar, aber algorithmisch redundant.</p>
  */
 final class BoardDragHandler {
 
