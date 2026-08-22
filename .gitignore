@@ -1,6 +1,13 @@
 ### Maven ###
 target/
 
+### Schach-Lernapp: generierte/lokale Daten ###
+# Lichess-Puzzle-CSV (~1GB) und die daraus importierte SQLite-DB - beides lokal
+# per PuzzleCsvImporter reproduzierbar, gehört nicht ins Repo.
+/data/
+puzzles.db
+cp.txt
+
 ### IntelliJ IDEA ###
 out/
 !**/src/main/**/out/

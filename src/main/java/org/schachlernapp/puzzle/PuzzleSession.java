@@ -1,5 +1,6 @@
 package org.schachlernapp.puzzle;
 
+import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.move.Move;
 import javafx.application.Platform;
@@ -35,6 +36,7 @@ public class PuzzleSession {
     private final int ratingRange;
 
     private final List<Consumer<PuzzleFeedback>> feedbackListeners = new ArrayList<>();
+    private final List<Consumer<Side>> puzzleStartedListeners = new ArrayList<>();
 
     private Puzzle currentPuzzle;
     private int nextSolutionIndex;
@@ -58,6 +60,15 @@ public class PuzzleSession {
 
     public void addFeedbackListener(Consumer<PuzzleFeedback> listener) {
         feedbackListeners.add(listener);
+    }
+
+    /**
+     * Meldet, sobald ein neues Puzzle geladen ist (nach dem automatisch gespielten
+     * Setup-Zug) - Parameter ist die Seite, die jetzt lösen muss. Für die UI gedacht,
+     * um das Brett passend auszurichten (lösende Seite unten).
+     */
+    public void addPuzzleStartedListener(Consumer<Side> listener) {
+        puzzleStartedListeners.add(listener);
     }
 
     public int userRating() {
@@ -89,6 +100,11 @@ public class PuzzleSession {
         nextSolutionIndex = 1;
         evaluationController.setBlunderFeedbackSuppressed(true);
         active = true;
+
+        Side solverSide = boardController.sideToMove();
+        for (Consumer<Side> listener : puzzleStartedListeners) {
+            listener.accept(solverSide);
+        }
     }
 
     private void onPositionChanged(ChangeReason reason) {

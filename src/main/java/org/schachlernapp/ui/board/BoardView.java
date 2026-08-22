@@ -24,8 +24,11 @@ import java.util.Map;
  * die gerade gezogene Figur frei positioniert. Rendert ausschließlich aus
  * {@link BoardController} - besitzt selbst keine Schachlogik.
  *
- * <p>Weiß steht unten (Standard-Orientierung); Umdrehen der Ansicht ist
- * bewusst nicht Teil von M2.</p>
+ * <p>Standard-Orientierung: Weiß unten. Über {@link #setFlipped(boolean)} kann
+ * das Brett gedreht werden (z.B. für Puzzles, bei denen die lösende Seite
+ * unten stehen soll) - die 64 {@link SquareView}-Objekte werden dabei nur
+ * innerhalb des Grids umpositioniert (bestehende Listener/Zustand bleiben
+ * erhalten), nicht neu erzeugt.</p>
  *
  * <p>Größenanpassung: {@code grid} und {@code dragLayer} bekommen in
  * {@link #layoutChildren()} bei jedem Resize exakt dieselbe quadratische
@@ -44,6 +47,7 @@ public class BoardView extends StackPane {
     private final BoardController controller;
 
     private double squareSize = INITIAL_SQUARE_SIZE;
+    private boolean flipped;
 
     public BoardView(BoardController controller) {
         this.controller = controller;
@@ -69,15 +73,43 @@ public class BoardView extends StackPane {
             row.setPercentHeight(100.0 / 8);
             grid.getRowConstraints().add(row);
         }
-        // GridPane-Spalte = Linie A..H, GridPane-Zeile 0 = Reihe 8 (oben), Zeile 7 = Reihe 1 (unten) -> Weiß unten.
-        for (int rankIdx = 7; rankIdx >= 0; rankIdx--) {
-            for (int fileIdx = 0; fileIdx < 8; fileIdx++) {
-                Square square = Square.encode(Rank.allRanks[rankIdx], File.allFiles[fileIdx]);
-                SquareView view = new SquareView(square);
-                squares.put(square, view);
-                grid.add(view, fileIdx, 7 - rankIdx);
+        for (Square square : Square.values()) {
+            if (square == Square.NONE) {
+                continue;
             }
+            SquareView view = new SquareView(square);
+            squares.put(square, view);
+            grid.add(view, columnFor(square), rowFor(square));
         }
+    }
+
+    /**
+     * Dreht das Brett um (Weiß unten &lt;-&gt; Schwarz unten). Positioniert die
+     * bestehenden {@link SquareView}-Objekte nur innerhalb des Grids neu, statt
+     * sie neu zu erzeugen - Drag&amp;Drop-Listener/Zustand bleiben unberührt.
+     */
+    public void setFlipped(boolean flipped) {
+        if (this.flipped == flipped) {
+            return;
+        }
+        this.flipped = flipped;
+        for (Map.Entry<Square, SquareView> entry : squares.entrySet()) {
+            Square square = entry.getKey();
+            GridPane.setColumnIndex(entry.getValue(), columnFor(square));
+            GridPane.setRowIndex(entry.getValue(), rowFor(square));
+        }
+    }
+
+    // Weiß unten (Standard): Spalte = Linie A..H links->rechts, Zeile 0 = Reihe 8 (oben) .. Zeile 7 = Reihe 1 (unten).
+    // Gedreht (Schwarz unten): beides gespiegelt.
+    private int columnFor(Square square) {
+        int fileIndex = square.getFile().ordinal();
+        return flipped ? 7 - fileIndex : fileIndex;
+    }
+
+    private int rowFor(Square square) {
+        int rankIndex = square.getRank().ordinal();
+        return flipped ? rankIndex : 7 - rankIndex;
     }
 
     @Override
@@ -161,6 +193,8 @@ public class BoardView extends StackPane {
         if (col < 0 || col > 7 || row < 0 || row > 7) {
             return null;
         }
-        return Square.encode(Rank.allRanks[7 - row], File.allFiles[col]);
+        int fileIndex = flipped ? 7 - col : col;
+        int rankIndex = flipped ? row : 7 - row;
+        return Square.encode(Rank.allRanks[rankIndex], File.allFiles[fileIndex]);
     }
 }

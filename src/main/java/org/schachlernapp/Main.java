@@ -1,5 +1,6 @@
 package org.schachlernapp;
 
+import com.github.bhlangonijr.chesslib.Side;
 import org.schachlernapp.analysis.EvaluationController;
 import org.schachlernapp.analysis.LearnModeController;
 import org.schachlernapp.analysis.MoveQuality;
@@ -53,12 +54,13 @@ public class Main extends Application {
 
         // Läuft im Hintergrund, damit ein fehlender/langsamer Stockfish das UI nicht blockiert.
         Thread diagnostics = new Thread(
-                () -> runStartupChecks(boardController, evalBar, learnModePanel, puzzlePanel), "startup-diagnostics");
+                () -> runStartupChecks(boardController, boardView, evalBar, learnModePanel, puzzlePanel),
+                "startup-diagnostics");
         diagnostics.setDaemon(true);
         diagnostics.start();
     }
 
-    private void runStartupChecks(BoardController boardController, EvalBar evalBar,
+    private void runStartupChecks(BoardController boardController, BoardView boardView, EvalBar evalBar,
                                    LearnModePanel learnModePanel, PuzzlePanel puzzlePanel) {
         System.out.println("=== Schach-Lernapp: Startdiagnose ===");
         ChessLibCheck.run();
@@ -109,6 +111,7 @@ public class Main extends Application {
                 puzzlePanel.updateRating(puzzleSession.userRating());
             });
             puzzlePanel.setOnNextPuzzleRequested(puzzleSession::loadNewPuzzleAsync);
+            puzzleSession.addPuzzleStartedListener(solverSide -> boardView.setFlipped(solverSide == Side.BLACK));
             System.out.println("[puzzle] DB geöffnet: " + puzzleDbPath
                     + " (importieren via PuzzleCsvImporter, falls noch leer)");
         } catch (Exception e) {
