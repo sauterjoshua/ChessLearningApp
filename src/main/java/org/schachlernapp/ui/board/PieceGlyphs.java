@@ -12,21 +12,31 @@ import java.util.Map;
  */
 final class PieceGlyphs {
 
+    /**
+     * Variation Selector-15 (VS15): erzwingt die monochrome Text-Darstellung
+     * statt einer evtl. farbigen Emoji-Variante. Betrifft in der Praxis vor
+     * allem den Bauern (U+265F) - dessen Codepoint hat auf vielen Systemen
+     * zusätzlich eine Farb-Emoji-Schriftart im Fallback (z.B. Noto Color
+     * Emoji), während König/Dame/Turm/Läufer/Springer keine solche
+     * Alternative haben und deshalb schon vorher konsistent gerendert wurden.
+     */
+    private static final String TEXT_STYLE = "︎";
+
     private static final Map<Piece, String> GLYPHS = new EnumMap<>(Piece.class);
 
     static {
-        GLYPHS.put(Piece.WHITE_KING, "♔");
-        GLYPHS.put(Piece.WHITE_QUEEN, "♕");
-        GLYPHS.put(Piece.WHITE_ROOK, "♖");
-        GLYPHS.put(Piece.WHITE_BISHOP, "♗");
-        GLYPHS.put(Piece.WHITE_KNIGHT, "♘");
-        GLYPHS.put(Piece.WHITE_PAWN, "♙");
-        GLYPHS.put(Piece.BLACK_KING, "♚");
-        GLYPHS.put(Piece.BLACK_QUEEN, "♛");
-        GLYPHS.put(Piece.BLACK_ROOK, "♜");
-        GLYPHS.put(Piece.BLACK_BISHOP, "♝");
-        GLYPHS.put(Piece.BLACK_KNIGHT, "♞");
-        GLYPHS.put(Piece.BLACK_PAWN, "♟");
+        GLYPHS.put(Piece.WHITE_KING, "♔" + TEXT_STYLE);
+        GLYPHS.put(Piece.WHITE_QUEEN, "♕" + TEXT_STYLE);
+        GLYPHS.put(Piece.WHITE_ROOK, "♖" + TEXT_STYLE);
+        GLYPHS.put(Piece.WHITE_BISHOP, "♗" + TEXT_STYLE);
+        GLYPHS.put(Piece.WHITE_KNIGHT, "♘" + TEXT_STYLE);
+        GLYPHS.put(Piece.WHITE_PAWN, "♙" + TEXT_STYLE);
+        GLYPHS.put(Piece.BLACK_KING, "♚" + TEXT_STYLE);
+        GLYPHS.put(Piece.BLACK_QUEEN, "♛" + TEXT_STYLE);
+        GLYPHS.put(Piece.BLACK_ROOK, "♜" + TEXT_STYLE);
+        GLYPHS.put(Piece.BLACK_BISHOP, "♝" + TEXT_STYLE);
+        GLYPHS.put(Piece.BLACK_KNIGHT, "♞" + TEXT_STYLE);
+        GLYPHS.put(Piece.BLACK_PAWN, "♟" + TEXT_STYLE);
     }
 
     private PieceGlyphs() {

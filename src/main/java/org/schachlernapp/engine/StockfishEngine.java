@@ -79,6 +79,15 @@ public class StockfishEngine implements AutoCloseable {
         stdin.flush();
     }
 
+    /**
+     * Liefert die nächste rohe UCI-Ausgabezeile (oder {@code null} bei Zeitüberschreitung),
+     * ohne wie {@link #waitFor(String, long)} dazwischenliegende Zeilen zu verwerfen.
+     * Wird von {@link EngineEvaluator} benötigt, um "info"-Zeilen mit Eval-Scores mitzulesen.
+     */
+    public String pollLine(long timeoutMs) throws InterruptedException {
+        return stdout.poll(timeoutMs, TimeUnit.MILLISECONDS);
+    }
+
     /** Liest Ausgabezeilen, bis eine davon mit dem gesuchten Token beginnt, oder das Timeout erreicht ist. */
     public String waitFor(String token, long timeoutMs) throws InterruptedException {
         long deadline = System.currentTimeMillis() + timeoutMs;

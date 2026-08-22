@@ -54,7 +54,7 @@ public class BoardView extends StackPane {
         dragLayer.setMouseTransparent(true); // Klicks sollen bei den SquareViews im Grid ankommen
         getChildren().addAll(grid, dragLayer);
 
-        controller.setOnPositionChanged(this::render);
+        controller.addPositionChangedListener(reason -> render());
         new BoardDragHandler(this, controller);
         render();
     }

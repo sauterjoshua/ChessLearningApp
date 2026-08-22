@@ -3,6 +3,7 @@ package org.schachlernapp.ui.board;
 import com.github.bhlangonijr.chesslib.Square;
 import javafx.geometry.Point2D;
 import javafx.scene.control.Label;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 
@@ -44,6 +45,9 @@ final class BoardDragHandler {
     }
 
     private void handlePress(MouseEvent event) {
+        if (event.getButton() != MouseButton.PRIMARY) {
+            return; // nur Linksklick greift eine Figur - Rechtsklick etc. soll nichts auslösen
+        }
         SquareView source = (SquareView) event.getSource();
         String glyph = source.getGlyph();
         if (glyph == null || glyph.isEmpty()) {
