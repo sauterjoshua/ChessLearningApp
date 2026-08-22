@@ -24,9 +24,10 @@ public class EvalBar extends Region {
     public EvalBar() {
         setPrefWidth(36);
         setMinWidth(24);
+        getStyleClass().add("eval-bar");
         blackPart.setStyle("-fx-background-color: #202020;");
         whitePart.setStyle("-fx-background-color: #f0f0f0;");
-        scoreLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #666;");
+        scoreLabel.getStyleClass().add("eval-bar-label");
         scoreLabel.setMouseTransparent(true);
         getChildren().addAll(blackPart, whitePart, scoreLabel);
     }

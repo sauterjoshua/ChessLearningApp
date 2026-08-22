@@ -7,43 +7,48 @@ import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import javafx.application.Platform;
 import javafx.geometry.Point2D;
+import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Label;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.RowConstraints;
-import javafx.scene.layout.StackPane;
 
 import java.util.EnumMap;
 import java.util.Map;
 
 /**
- * 8x8-Schachbrett-Widget. Besteht aus zwei übereinanderliegenden Ebenen:
- * dem {@link GridPane} mit den 64 {@link SquareView}-Feldern und einer
- * transparenten {@link Pane} ("dragLayer"), auf der {@link BoardDragHandler}
- * die gerade gezogene Figur frei positioniert. Rendert ausschließlich aus
- * {@link BoardController} - besitzt selbst keine Schachlogik.
+ * 8x8-Schachbrett-Widget. Besteht aus dem {@link GridPane} mit den 64
+ * {@link SquareView}-Feldern, einer transparenten {@link Pane} ("dragLayer"),
+ * auf der {@link BoardDragHandler} die gerade gezogene Figur frei
+ * positioniert, sowie Rand-Beschriftungen (a-h/1-8) als eigenständige
+ * {@link Label}-Nodes. Rendert ausschließlich aus {@link BoardController} -
+ * besitzt selbst keine Schachlogik.
  *
  * <p>Standard-Orientierung: Weiß unten. Über {@link #setFlipped(boolean)} kann
  * das Brett gedreht werden (z.B. für Puzzles, bei denen die lösende Seite
  * unten stehen soll) - die 64 {@link SquareView}-Objekte werden dabei nur
  * innerhalb des Grids umpositioniert (bestehende Listener/Zustand bleiben
- * erhalten), nicht neu erzeugt.</p>
+ * erhalten), nicht neu erzeugt; die Rand-Labels folgen über denselben
+ * Spalten/Zeilen-Mechanismus.</p>
  *
- * <p>Größenanpassung: {@code grid} und {@code dragLayer} bekommen in
- * {@link #layoutChildren()} bei jedem Resize exakt dieselbe quadratische
- * Kantenlänge (= kleinere Seite der verfügbaren Fläche) als Min/Pref/Max
- * verpasst. Das hält beide Ebenen deckungsgleich - wichtig, da
- * {@link BoardDragHandler} Koordinaten zwischen ihnen umrechnet - und
- * erzwingt ein quadratisches Brett unabhängig vom Fensterformat.</p>
+ * <p>Größenanpassung: Basisklasse ist bewusst {@link Pane} statt
+ * {@code StackPane} - die Beschriftung braucht einen festen Rand nur auf
+ * zwei Seiten (links/unten), den eine zentrierende StackPane nicht abbilden
+ * kann. {@link #layoutChildren()} positioniert Grid, Drag-Layer und Labels
+ * daher vollständig manuell über {@code resizeRelocate(...)}.</p>
  */
-public class BoardView extends StackPane {
+public class BoardView extends Pane {
 
     private static final int INITIAL_SQUARE_SIZE = 72;
+    private static final double LABEL_MARGIN = 22;
 
     private final Map<Square, SquareView> squares = new EnumMap<>(Square.class);
     private final GridPane grid = new GridPane();
     private final Pane dragLayer = new Pane();
+    private final Label[] fileLabels = new Label[8]; // Index = File.ordinal() (0=A..7=H)
+    private final Label[] rankLabels = new Label[8]; // Index = Rank.ordinal() (0=Rang1..7=Rang8)
     private final BoardController controller;
 
     private double squareSize = INITIAL_SQUARE_SIZE;
@@ -55,8 +60,15 @@ public class BoardView extends StackPane {
         setMaxHeight(Double.MAX_VALUE);
 
         buildGrid();
+        buildLabels();
         dragLayer.setMouseTransparent(true); // Klicks sollen bei den SquareViews im Grid ankommen
         getChildren().addAll(grid, dragLayer);
+        for (Label label : fileLabels) {
+            getChildren().add(label);
+        }
+        for (Label label : rankLabels) {
+            getChildren().add(label);
+        }
 
         controller.addPositionChangedListener(reason -> render());
         new BoardDragHandler(this, controller);
@@ -83,6 +95,21 @@ public class BoardView extends StackPane {
         }
     }
 
+    private void buildLabels() {
+        for (int fileIndex = 0; fileIndex < 8; fileIndex++) {
+            Label label = new Label(File.allFiles[fileIndex].getNotation().toLowerCase());
+            label.setAlignment(Pos.CENTER);
+            label.getStyleClass().add("board-coordinate");
+            fileLabels[fileIndex] = label;
+        }
+        for (int rankIndex = 0; rankIndex < 8; rankIndex++) {
+            Label label = new Label(Rank.allRanks[rankIndex].getNotation());
+            label.setAlignment(Pos.CENTER);
+            label.getStyleClass().add("board-coordinate");
+            rankLabels[rankIndex] = label;
+        }
+    }
+
     /**
      * Dreht das Brett um (Weiß unten &lt;-&gt; Schwarz unten). Positioniert die
      * bestehenden {@link SquareView}-Objekte nur innerhalb des Grids neu, statt
@@ -98,33 +125,56 @@ public class BoardView extends StackPane {
             GridPane.setColumnIndex(entry.getValue(), columnFor(square));
             GridPane.setRowIndex(entry.getValue(), rowFor(square));
         }
+        requestLayout(); // Grid-Umsortierung allein löst keinen neuen Layout-Pass auf BoardView selbst aus - Labels müssten sonst stehen bleiben
     }
 
     // Weiß unten (Standard): Spalte = Linie A..H links->rechts, Zeile 0 = Reihe 8 (oben) .. Zeile 7 = Reihe 1 (unten).
     // Gedreht (Schwarz unten): beides gespiegelt.
     private int columnFor(Square square) {
-        int fileIndex = square.getFile().ordinal();
-        return flipped ? 7 - fileIndex : fileIndex;
+        return columnForFile(square.getFile());
     }
 
     private int rowFor(Square square) {
-        int rankIndex = square.getRank().ordinal();
+        return rowForRank(square.getRank());
+    }
+
+    private int columnForFile(File file) {
+        int fileIndex = file.ordinal();
+        return flipped ? 7 - fileIndex : fileIndex;
+    }
+
+    private int rowForRank(Rank rank) {
+        int rankIndex = rank.ordinal();
         return flipped ? rankIndex : 7 - rankIndex;
     }
 
     @Override
     protected void layoutChildren() {
-        double side = Math.max(0, Math.floor(Math.min(getWidth(), getHeight())));
-        if (side > 0) {
-            squareSize = side / 8;
-            grid.setMinSize(side, side);
-            grid.setPrefSize(side, side);
-            grid.setMaxSize(side, side);
-            dragLayer.setMinSize(side, side);
-            dragLayer.setPrefSize(side, side);
-            dragLayer.setMaxSize(side, side);
+        double available = Math.max(0, Math.floor(Math.min(getWidth(), getHeight())));
+        double side = Math.max(0, available - LABEL_MARGIN);
+        if (side <= 0) {
+            return;
         }
-        super.layoutChildren();
+        squareSize = side / 8;
+
+        grid.setMinSize(side, side);
+        grid.setPrefSize(side, side);
+        grid.setMaxSize(side, side);
+        grid.resizeRelocate(LABEL_MARGIN, 0, side, side);
+
+        dragLayer.setMinSize(side, side);
+        dragLayer.setPrefSize(side, side);
+        dragLayer.setMaxSize(side, side);
+        dragLayer.resizeRelocate(LABEL_MARGIN, 0, side, side);
+
+        for (int fileIndex = 0; fileIndex < 8; fileIndex++) {
+            int col = columnForFile(File.allFiles[fileIndex]);
+            fileLabels[fileIndex].resizeRelocate(LABEL_MARGIN + col * squareSize, side, squareSize, LABEL_MARGIN);
+        }
+        for (int rankIndex = 0; rankIndex < 8; rankIndex++) {
+            int row = rowForRank(Rank.allRanks[rankIndex]);
+            rankLabels[rankIndex].resizeRelocate(0, row * squareSize, LABEL_MARGIN, squareSize);
+        }
     }
 
     private void render() {

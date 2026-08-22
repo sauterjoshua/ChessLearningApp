@@ -4,6 +4,8 @@ import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.move.Move;
 import javafx.application.Platform;
+import javafx.animation.PauseTransition;
+import javafx.util.Duration;
 import org.schachlernapp.analysis.EvaluationController;
 import org.schachlernapp.ui.board.BoardController;
 import org.schachlernapp.ui.board.ChangeReason;
@@ -24,10 +26,17 @@ import java.util.function.Consumer;
  * {@link EvaluationController#setBlunderFeedbackSuppressed} für die Dauer des
  * Puzzles aktiviert, damit auch der *eigene* (korrekte, aber ggf. materialopfernde)
  * Lösungszug des Users nicht fälschlich als Blunder gewertet wird.</p>
+ *
+ * <p>Nach einem gelösten Puzzle wird nach kurzer Verzögerung (Zeit für die
+ * grüne Aufblink-Animation in der UI) automatisch {@link #loadNewPuzzleAsync()}
+ * aufgerufen - kein manueller Klick mehr nötig. Bei falscher Lösung passiert
+ * das bewusst NICHT - dort entscheidet der User über {@link #retryCurrentPuzzle()}
+ * oder einen manuellen "Neues Puzzle"-Klick.</p>
  */
 public class PuzzleSession {
 
     public static final int DEFAULT_RATING_RANGE = 200;
+    private static final Duration AUTO_ADVANCE_DELAY = Duration.millis(900);
 
     private final BoardController boardController;
     private final PuzzleRepository repository;
@@ -95,8 +104,23 @@ public class PuzzleSession {
 
     private void applyPuzzle(Puzzle puzzle) {
         currentPuzzle = puzzle;
-        boardController.loadFen(puzzle.fen());
-        playUciMove(puzzle.solutionMoves().get(0));
+        startCurrentPuzzle();
+    }
+
+    /**
+     * Setzt das Brett auf die Ausgangsstellung des *aktuellen* Puzzles zurück
+     * (derselbe Versuch, kein neuer DB-Zugriff) - für den "Nochmal versuchen"-
+     * Button nach einer falschen Lösung. Ohne aktuelles Puzzle ein No-Op.
+     */
+    public void retryCurrentPuzzle() {
+        if (currentPuzzle != null) {
+            startCurrentPuzzle();
+        }
+    }
+
+    private void startCurrentPuzzle() {
+        boardController.loadFen(currentPuzzle.fen());
+        playUciMove(currentPuzzle.solutionMoves().get(0));
         nextSolutionIndex = 1;
         evaluationController.setBlunderFeedbackSuppressed(true);
         active = true;
@@ -142,6 +166,14 @@ public class PuzzleSession {
         active = false;
         notifyFeedback(new PuzzleFeedback(
                 solved ? PuzzleOutcome.CORRECT_SOLVED : PuzzleOutcome.INCORRECT, expectedMoveUci, delta));
+
+        if (solved) {
+            // Kurze Pause, damit die grüne Aufblink-Animation in der UI sichtbar durchlaufen
+            // kann, bevor das Brett auf das nächste Puzzle wechselt.
+            PauseTransition pause = new PauseTransition(AUTO_ADVANCE_DELAY);
+            pause.setOnFinished(e -> loadNewPuzzleAsync());
+            pause.play();
+        }
     }
 
     private void playUciMove(String uciMove) {

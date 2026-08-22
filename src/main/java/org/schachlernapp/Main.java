@@ -9,6 +9,7 @@ import org.schachlernapp.engine.EngineEvaluator;
 import org.schachlernapp.engine.StockfishEngine;
 import org.schachlernapp.progress.ProgressData;
 import org.schachlernapp.progress.ProgressStore;
+import org.schachlernapp.ui.OptionsPanel;
 import org.schachlernapp.ui.UiAlerts;
 import org.schachlernapp.ui.board.BoardController;
 import org.schachlernapp.ui.board.BoardView;
@@ -24,6 +25,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import java.util.EnumMap;
@@ -68,26 +70,40 @@ public class Main extends Application {
         EvalBar evalBar = new EvalBar();
         LearnModePanel learnModePanel = new LearnModePanel();
         PuzzlePanel puzzlePanel = new PuzzlePanel();
+        OptionsPanel optionsPanel = new OptionsPanel();
 
-        HBox root = new HBox(evalBar, boardView, learnModePanel, puzzlePanel);
-        root.setAlignment(Pos.CENTER);
+        // Feedback/Ratings (LearnModePanel + PuzzlePanel) in einer Leiste ÜBER dem Brett,
+        // Optionen (OptionsPanel) als eigene Spalte RECHTS neben dem Brett.
+        HBox.setHgrow(learnModePanel, Priority.ALWAYS);
+        HBox.setHgrow(puzzlePanel, Priority.ALWAYS);
+        learnModePanel.setMaxWidth(Double.MAX_VALUE);
+        puzzlePanel.setMaxWidth(Double.MAX_VALUE);
+        HBox feedbackRow = new HBox(8, learnModePanel, puzzlePanel);
+
+        HBox boardRow = new HBox(evalBar, boardView, optionsPanel);
+        boardRow.setAlignment(Pos.CENTER);
         HBox.setHgrow(boardView, Priority.ALWAYS);
 
-        primaryStage.setScene(new Scene(root, 1200, 600));
+        VBox root = new VBox(8, feedbackRow, boardRow);
+        VBox.setVgrow(boardRow, Priority.ALWAYS);
+
+        Scene scene = new Scene(root, 1200, 700);
+        scene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        primaryStage.setScene(scene);
         primaryStage.setMinWidth(600);
         primaryStage.setMinHeight(320);
         primaryStage.show();
 
         // Läuft im Hintergrund, damit ein fehlender/langsamer Stockfish das UI nicht blockiert.
         Thread diagnostics = new Thread(
-                () -> runStartupChecks(boardController, boardView, evalBar, learnModePanel, puzzlePanel),
+                () -> runStartupChecks(boardController, boardView, evalBar, learnModePanel, puzzlePanel, optionsPanel),
                 "startup-diagnostics");
         diagnostics.setDaemon(true);
         diagnostics.start();
     }
 
     private void runStartupChecks(BoardController boardController, BoardView boardView, EvalBar evalBar,
-                                   LearnModePanel learnModePanel, PuzzlePanel puzzlePanel) {
+                                   LearnModePanel learnModePanel, PuzzlePanel puzzlePanel, OptionsPanel optionsPanel) {
         System.out.println("=== Schach-Lernapp: Startdiagnose ===");
         ProgressData progress = progressStore.load();
         this.progress = progress;
@@ -133,7 +149,7 @@ public class Main extends Application {
                     learnModeController.countOf(MoveQuality.BLUNDER));
             saveProgress(); // nach jedem Lern-Modus-Zug, nicht erst bei stop() - siehe M7-Auftrag
         });
-        learnModePanel.setOnResetRequested(learnModeController::resetSession);
+        optionsPanel.setOnNewGameRequested(learnModeController::resetSession);
 
         String puzzleDbPath = PuzzleRepository.resolveDefaultPath();
         try {
@@ -151,7 +167,8 @@ public class Main extends Application {
                     saveProgress(); // nach jedem gelösten/falschen Puzzle, nicht erst bei stop()
                 }
             });
-            puzzlePanel.setOnNextPuzzleRequested(puzzleSession::loadNewPuzzleAsync);
+            puzzlePanel.setOnRetryRequested(puzzleSession::retryCurrentPuzzle);
+            optionsPanel.setOnNewPuzzleRequested(puzzleSession::loadNewPuzzleAsync);
             puzzleSession.addPuzzleStartedListener(solverSide -> boardView.setFlipped(solverSide == Side.BLACK));
             System.out.println("[puzzle] DB geöffnet: " + puzzleDbPath
                     + " (importieren via PuzzleCsvImporter, falls noch leer)");

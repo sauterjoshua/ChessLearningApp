@@ -5,15 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e701ebb7-a6ba-4ee6-86d4-415cdff794c6" name="Changes" comment="feat:Grundgerüst">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/org/schachlernapp/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/schachlernapp/Main.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/schachlernapp/analysis/EvaluationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/schachlernapp/analysis/EvaluationController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/schachlernapp/analysis/LearnModeController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/schachlernapp/analysis/LearnModeController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/schachlernapp/puzzle/PuzzleRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/schachlernapp/puzzle/PuzzleRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/org/schachlernapp/puzzle/PuzzleSession.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/schachlernapp/puzzle/PuzzleSession.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/schachlernapp/ui/board/BoardDragHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/schachlernapp/ui/board/BoardDragHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/schachlernapp/ui/board/BoardView.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/schachlernapp/ui/board/BoardView.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/schachlernapp/ui/board/SquareView.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/schachlernapp/ui/board/SquareView.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/schachlernapp/ui/eval/EvalBar.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/schachlernapp/ui/eval/EvalBar.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/schachlernapp/ui/learn/LearnModePanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/schachlernapp/ui/learn/LearnModePanel.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/schachlernapp/ui/puzzle/PuzzlePanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/schachlernapp/ui/puzzle/PuzzlePanel.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

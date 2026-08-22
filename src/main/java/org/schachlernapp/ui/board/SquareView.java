@@ -1,18 +1,10 @@
 package org.schachlernapp.ui.board;
 
 import com.github.bhlangonijr.chesslib.Square;
-import javafx.geometry.Insets;
+import javafx.css.PseudoClass;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.Border;
-import javafx.scene.layout.BorderStroke;
-import javafx.scene.layout.BorderStrokeStyle;
-import javafx.scene.layout.BorderWidths;
-import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.StackPane;
-import javafx.scene.paint.Color;
 
 /**
  * Ein einzelnes Brettfeld: Hintergrundfarbe + Figuren-Glyph. Rein visuell -
@@ -21,29 +13,27 @@ import javafx.scene.paint.Color;
  * bzw. die Highlight-Methoden vorgibt. Größe wird von {@link BoardView} über
  * das umgebende {@code GridPane} vorgegeben - die Schrift skaliert per
  * Breiten-Listener automatisch mit.
+ *
+ * <p>Farben kommen aus {@code style.css} (Klassen {@code square-light}/
+ * {@code square-dark}, Pseudo-Klassen {@code selected}/{@code check}/
+ * {@code legal-target}) statt aus Java-Code - so lässt sich das Farbschema
+ * zentral in einer Datei anpassen (z.B. auf chess.com-typische Farben).</p>
  */
 public class SquareView extends StackPane {
 
-    private static final Color LIGHT = Color.web("#f0d9b5");
-    private static final Color DARK = Color.web("#b58863");
-    private static final Color SELECTED = Color.web("#f7ec6e");
-    private static final Color CHECK = Color.web("#e05252");
-    private static final Color TARGET_MARK = Color.web("#2e7d32");
+    private static final PseudoClass SELECTED_CLASS = PseudoClass.getPseudoClass("selected");
+    private static final PseudoClass CHECK_CLASS = PseudoClass.getPseudoClass("check");
+    private static final PseudoClass LEGAL_TARGET_CLASS = PseudoClass.getPseudoClass("legal-target");
 
     private final Square square;
-    private final boolean lightSquare;
     private final Label pieceLabel = new Label();
-
-    private boolean selected;
-    private boolean inCheck;
 
     public SquareView(Square square) {
         this.square = square;
-        this.lightSquare = square.isLightSquare();
         setAlignment(Pos.CENTER);
+        getStyleClass().addAll("square", square.isLightSquare() ? "square-light" : "square-dark");
         pieceLabel.setMouseTransparent(true); // Maus-Events sollen an der SquareView ankommen, nicht am Label
         getChildren().add(pieceLabel);
-        applyBackground();
         updateFontSize(getWidth());
         widthProperty().addListener((obs, oldWidth, newWidth) -> updateFontSize(newWidth.doubleValue()));
     }
@@ -66,25 +56,15 @@ public class SquareView extends StackPane {
     }
 
     void setSelected(boolean selected) {
-        this.selected = selected;
-        applyBackground();
+        pseudoClassStateChanged(SELECTED_CLASS, selected);
     }
 
     void setInCheck(boolean inCheck) {
-        this.inCheck = inCheck;
-        applyBackground();
+        pseudoClassStateChanged(CHECK_CLASS, inCheck);
     }
 
     void setLegalTarget(boolean legalTarget) {
-        setBorder(legalTarget
-                ? new Border(new BorderStroke(TARGET_MARK, BorderStrokeStyle.SOLID,
-                        CornerRadii.EMPTY, new BorderWidths(3)))
-                : Border.EMPTY);
-    }
-
-    private void applyBackground() {
-        Color color = selected ? SELECTED : inCheck ? CHECK : (lightSquare ? LIGHT : DARK);
-        setBackground(new Background(new BackgroundFill(color, CornerRadii.EMPTY, Insets.EMPTY)));
+        pseudoClassStateChanged(LEGAL_TARGET_CLASS, legalTarget);
     }
 
     private void updateFontSize(double squareWidth) {

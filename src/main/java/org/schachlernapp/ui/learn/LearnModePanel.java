@@ -2,7 +2,6 @@ package org.schachlernapp.ui.learn;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -22,20 +21,20 @@ public class LearnModePanel extends VBox {
     private final Label feedbackLabel = new Label("Mach einen Zug, um Feedback zu erhalten.");
     private final Label suggestionLabel = new Label();
     private final Label tallyLabel = new Label("Gut: 0  Ungenau: 0  Fehler: 0  Blunder: 0");
-    private final Button resetButton = new Button("Neue Runde");
 
     public LearnModePanel() {
         setSpacing(8);
         setPadding(new Insets(8));
         setAlignment(Pos.TOP_CENTER);
         setPrefWidth(220);
+        getStyleClass().add("side-panel");
 
         feedbackLabel.setWrapText(true);
-        feedbackLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+        feedbackLabel.getStyleClass().add("panel-heading");
         suggestionLabel.setWrapText(true);
-        tallyLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #666;");
+        tallyLabel.getStyleClass().add("panel-muted");
 
-        getChildren().addAll(feedbackLabel, suggestionLabel, tallyLabel, resetButton);
+        getChildren().addAll(feedbackLabel, suggestionLabel, tallyLabel);
     }
 
     public void showFeedback(MoveFeedback feedback) {
@@ -49,10 +48,6 @@ public class LearnModePanel extends VBox {
     public void updateTally(int good, int inaccuracy, int mistake, int blunder) {
         tallyLabel.setText(String.format("Gut: %d  Ungenau: %d  Fehler: %d  Blunder: %d",
                 good, inaccuracy, mistake, blunder));
-    }
-
-    public void setOnResetRequested(Runnable action) {
-        resetButton.setOnAction(e -> action.run());
     }
 
     private static Color colorFor(MoveQuality quality) {

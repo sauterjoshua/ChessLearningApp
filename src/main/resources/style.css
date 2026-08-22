@@ -1,0 +1,81 @@
+/*
+ * Schach-Lernapp: zentrales Stylesheet (chess.com-ähnliches Farbschema).
+ * Eingebunden über scene.getStylesheets().add(...) in Main.java.
+ */
+
+.root {
+    -fx-background-color: #ececec;
+    -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* --- Brett (SquareView) --- */
+
+.square-light {
+    -fx-background-color: #eeeed2;
+}
+
+.square-dark {
+    -fx-background-color: #769656;
+}
+
+.square:selected {
+    -fx-background-color: #f7f769;
+}
+
+.square:check {
+    -fx-background-color: #e05252;
+}
+
+.square:legal-target {
+    -fx-border-color: #2e7d32;
+    -fx-border-width: 3;
+}
+
+.board-coordinate {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #5a5a5a;
+}
+
+/* --- Seitenpanels (EvalBar/PuzzlePanel/LearnModePanel/OptionsPanel) --- */
+
+.side-panel {
+    -fx-background-color: white;
+    -fx-background-radius: 6;
+    -fx-border-color: #d5d5d5;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+}
+
+.panel-heading {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.panel-muted {
+    -fx-font-size: 11px;
+    -fx-text-fill: #666666;
+}
+
+.eval-bar {
+    -fx-background-radius: 4;
+    -fx-border-color: #d5d5d5;
+    -fx-border-radius: 4;
+    -fx-border-width: 1;
+}
+
+.eval-bar-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: #666666;
+}
+
+/* Kurzes grünes Aufblinken bei korrektem Puzzle-Zug (PuzzlePanel.flashSuccess()) */
+.puzzle-flash-success {
+    -fx-border-color: #2e7d32;
+    -fx-border-width: 3;
+    -fx-border-radius: 6;
+}
+
+.button {
+    -fx-cursor: hand;
+}
