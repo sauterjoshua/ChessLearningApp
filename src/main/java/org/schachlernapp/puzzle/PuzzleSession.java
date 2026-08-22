@@ -25,7 +25,11 @@ import java.util.function.Consumer;
  * nur auf echte User-Züge, ganz ohne Reentrancy-Flag. Zusätzlich wird
  * {@link EvaluationController#setBlunderFeedbackSuppressed} für die Dauer des
  * Puzzles aktiviert, damit auch der *eigene* (korrekte, aber ggf. materialopfernde)
- * Lösungszug des Users nicht fälschlich als Blunder gewertet wird.</p>
+ * Lösungszug des Users nicht fälschlich als Blunder gewertet wird. Genauso wird
+ * {@link BoardController#setGameOverDialogSuppressed} aktiviert - ein Puzzle endet
+ * oft absichtlich in einem Matt, das über das eigene Puzzle-Feedback (grünes
+ * Aufblinken, Auto-Advance) kommuniziert wird statt über den generischen
+ * "Partie beendet"-Dialog aus M2.</p>
  *
  * <p>Nach einem gelösten Puzzle wird nach kurzer Verzögerung (Zeit für die
  * grüne Aufblink-Animation in der UI) automatisch {@link #loadNewPuzzleAsync()}
@@ -123,6 +127,7 @@ public class PuzzleSession {
         playUciMove(currentPuzzle.solutionMoves().get(0));
         nextSolutionIndex = 1;
         evaluationController.setBlunderFeedbackSuppressed(true);
+        boardController.setGameOverDialogSuppressed(true);
         active = true;
 
         Side solverSide = boardController.sideToMove();
@@ -163,6 +168,7 @@ public class PuzzleSession {
         int delta = ratingService.recordResult(currentPuzzle.rating(), solved);
         String expectedMoveUci = solved ? null : currentPuzzle.solutionMoves().get(nextSolutionIndex);
         evaluationController.setBlunderFeedbackSuppressed(false);
+        boardController.setGameOverDialogSuppressed(false);
         active = false;
         notifyFeedback(new PuzzleFeedback(
                 solved ? PuzzleOutcome.CORRECT_SOLVED : PuzzleOutcome.INCORRECT, expectedMoveUci, delta));

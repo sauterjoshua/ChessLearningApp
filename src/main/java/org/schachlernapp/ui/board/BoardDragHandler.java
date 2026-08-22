@@ -1,11 +1,14 @@
 package org.schachlernapp.ui.board;
 
+import com.github.bhlangonijr.chesslib.Piece;
+import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import javafx.geometry.Point2D;
-import javafx.scene.control.Label;
+import javafx.geometry.VPos;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
+import javafx.scene.text.Text;
 
 import java.util.Set;
 
@@ -32,7 +35,7 @@ final class BoardDragHandler {
     private final Pane dragLayer;
 
     private Square originSquare;
-    private Label floatingPiece;
+    private Text floatingPiece;
     private Set<Square> highlightedTargets = Set.of();
 
     BoardDragHandler(BoardView boardView, BoardController controller) {
@@ -56,12 +59,13 @@ final class BoardDragHandler {
             return; // nur Linksklick greift eine Figur - Rechtsklick etc. soll nichts auslösen
         }
         SquareView source = (SquareView) event.getSource();
-        String glyph = source.getGlyph();
-        if (glyph == null || glyph.isEmpty()) {
+        Square candidate = source.getSquare();
+        Piece piece = controller.pieceAt(candidate);
+        if (piece == null || piece == Piece.NONE) {
             return; // leeres Feld - nichts zu greifen
         }
 
-        originSquare = source.getSquare();
+        originSquare = candidate;
         highlightedTargets = controller.legalDestinations(originSquare);
         source.setSelected(true);
         for (Square target : highlightedTargets) {
@@ -69,14 +73,19 @@ final class BoardDragHandler {
         }
 
         source.setGlyphVisible(false);
-        floatingPiece = new Label(glyph);
-        floatingPiece.setStyle("-fx-font-size: " + Math.max(8, boardView.getSquareSize() * 0.62) + "px;");
+        floatingPiece = new Text(PieceGlyphs.of(piece));
+        floatingPiece.getStyleClass().add(piece.getPieceSide() == Side.WHITE ? "piece-white" : "piece-black");
+        double fontSize = Math.max(8, boardView.getSquareSize() * SquareView.PIECE_FONT_RATIO);
+        floatingPiece.setStyle("-fx-font-size: " + fontSize + "px;");
+        floatingPiece.setStrokeWidth(Math.max(0.6, fontSize * SquareView.PIECE_STROKE_RATIO));
+        floatingPiece.setTextOrigin(VPos.CENTER);
         floatingPiece.setMouseTransparent(true);
         dragLayer.getChildren().add(floatingPiece);
-        // CSS/Größe synchron erzwingen - sonst liefert getBoundsInLocal() vor dem ersten
-        // Layout-Pulse noch (0,0) und die Figur würde beim ersten Frame verschoben aufblitzen.
+        // CSS synchron erzwingen - sonst liefert getBoundsInLocal() vor dem ersten Layout-Pulse
+        // noch (0,0) und die Figur würde beim ersten Frame verschoben aufblitzen. Text braucht
+        // (anders als das vorherige Label) kein autosize() - seine Bounds ergeben sich direkt
+        // aus Text+Font, ohne separaten Resize-Schritt.
         floatingPiece.applyCss();
-        floatingPiece.autosize();
         positionFloatingPiece(event);
     }
 

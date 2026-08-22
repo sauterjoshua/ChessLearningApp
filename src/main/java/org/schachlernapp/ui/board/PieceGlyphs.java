@@ -9,6 +9,13 @@ import java.util.Map;
  * Bildet chesslib-{@link Piece} auf Unicode-Schachsymbole ab. Einziger
  * Umschaltpunkt, falls später Bild-Assets (ImageView) statt Glyphen
  * verwendet werden sollen - BoardView/SquareView bleiben davon unberührt.
+ *
+ * <p>Weiß und Schwarz nutzen bewusst dieselben "gefüllten" Glyphen (♚♛♜♝♞♟)
+ * statt der eigentlich für Weiß vorgesehenen Konturzeichen (♔♕♖♗♘♙) - Letztere
+ * sind reine Umrisse ohne Füllfläche und wirken besonders bei kleineren
+ * Feldgrößen dünn/schlecht erkennbar. Die tatsächliche Farbunterscheidung
+ * übernimmt {@link SquareView} über CSS-Füllfarbe + Kontur
+ * ({@code piece-white}/{@code piece-black} in {@code style.css}).</p>
  */
 final class PieceGlyphs {
 
@@ -25,12 +32,12 @@ final class PieceGlyphs {
     private static final Map<Piece, String> GLYPHS = new EnumMap<>(Piece.class);
 
     static {
-        GLYPHS.put(Piece.WHITE_KING, "♔" + TEXT_STYLE);
-        GLYPHS.put(Piece.WHITE_QUEEN, "♕" + TEXT_STYLE);
-        GLYPHS.put(Piece.WHITE_ROOK, "♖" + TEXT_STYLE);
-        GLYPHS.put(Piece.WHITE_BISHOP, "♗" + TEXT_STYLE);
-        GLYPHS.put(Piece.WHITE_KNIGHT, "♘" + TEXT_STYLE);
-        GLYPHS.put(Piece.WHITE_PAWN, "♙" + TEXT_STYLE);
+        GLYPHS.put(Piece.WHITE_KING, "♚" + TEXT_STYLE);
+        GLYPHS.put(Piece.WHITE_QUEEN, "♛" + TEXT_STYLE);
+        GLYPHS.put(Piece.WHITE_ROOK, "♜" + TEXT_STYLE);
+        GLYPHS.put(Piece.WHITE_BISHOP, "♝" + TEXT_STYLE);
+        GLYPHS.put(Piece.WHITE_KNIGHT, "♞" + TEXT_STYLE);
+        GLYPHS.put(Piece.WHITE_PAWN, "♟" + TEXT_STYLE);
         GLYPHS.put(Piece.BLACK_KING, "♚" + TEXT_STYLE);
         GLYPHS.put(Piece.BLACK_QUEEN, "♛" + TEXT_STYLE);
         GLYPHS.put(Piece.BLACK_ROOK, "♜" + TEXT_STYLE);

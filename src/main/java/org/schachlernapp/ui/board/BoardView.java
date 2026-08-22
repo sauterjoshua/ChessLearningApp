@@ -1,7 +1,6 @@
 package org.schachlernapp.ui.board;
 
 import com.github.bhlangonijr.chesslib.File;
-import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.Rank;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
@@ -179,8 +178,7 @@ public class BoardView extends Pane {
 
     private void render() {
         for (Map.Entry<Square, SquareView> entry : squares.entrySet()) {
-            Piece piece = controller.pieceAt(entry.getKey());
-            entry.getValue().setGlyph(PieceGlyphs.of(piece));
+            entry.getValue().setPiece(controller.pieceAt(entry.getKey()));
         }
         updateCheckHighlight();
         Platform.runLater(this::maybeShowGameOverDialog);
@@ -196,6 +194,9 @@ public class BoardView extends Pane {
     }
 
     private void maybeShowGameOverDialog() {
+        if (controller.isGameOverDialogSuppressed()) {
+            return;
+        }
         String message;
         if (controller.isCheckmate()) {
             Side winner = controller.sideToMove() == Side.WHITE ? Side.BLACK : Side.WHITE;
