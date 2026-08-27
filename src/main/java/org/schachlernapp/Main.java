@@ -204,6 +204,7 @@ public class Main extends Application {
             });
             puzzlePanel.setOnRetryRequested(puzzleSession::retryCurrentPuzzle);
             optionsPanel.setOnNewPuzzleRequested(puzzleSession::loadNewPuzzleAsync);
+            optionsPanel.setOnEndgameThemeSelected(puzzleSession::loadEndgamePuzzleAsync);
             puzzleSession.addPuzzleStartedListener(solverSide -> boardView.setFlipped(solverSide == Side.BLACK));
             System.out.println("[puzzle] DB geöffnet: " + puzzleDbPath
                     + " (importieren via PuzzleCsvImporter, falls noch leer)");

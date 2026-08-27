@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Orchestriert ein Puzzle: lädt eine Stellung, spielt den Lichess-Setup-Zug
@@ -91,8 +92,21 @@ public class PuzzleSession {
     /** Sucht adaptiv um das aktuelle User-Rating (±{@code ratingRange}) und lädt es. DB-Zugriff im Hintergrund. */
     public void loadNewPuzzleAsync() {
         PuzzleFilter filter = PuzzleFilter.aroundRating(ratingService.rating(), ratingRange);
+        loadPuzzleAsync(() -> repository.random(filter), "puzzle-loader");
+    }
+
+    /**
+     * M9-Endgame-Untermenü: lädt ein Matt-Puzzle des gewählten Endspiel-Themas, unabhängig vom
+     * User-Rating (siehe {@link PuzzleRepository#randomEndgameMate(String)}). Ablauf danach
+     * identisch zu {@link #loadNewPuzzleAsync()} (gleiches {@code PuzzlePanel}-Feedback).
+     */
+    public void loadEndgamePuzzleAsync(EndgameTheme theme) {
+        loadPuzzleAsync(() -> repository.randomEndgameMate(theme.lichessTheme()), "endgame-puzzle-loader");
+    }
+
+    private void loadPuzzleAsync(Supplier<Optional<Puzzle>> puzzleSupplier, String threadName) {
         Thread loader = new Thread(() -> {
-            Optional<Puzzle> puzzle = repository.random(filter);
+            Optional<Puzzle> puzzle = puzzleSupplier.get();
             Platform.runLater(() -> {
                 if (puzzle.isPresent() && puzzle.get().solutionMoves().size() >= 2) {
                     applyPuzzle(puzzle.get());
@@ -101,7 +115,7 @@ public class PuzzleSession {
                     notifyFeedback(new PuzzleFeedback(PuzzleOutcome.NO_PUZZLE_FOUND, null, 0));
                 }
             });
-        }, "puzzle-loader");
+        }, threadName);
         loader.setDaemon(true);
         loader.start();
     }

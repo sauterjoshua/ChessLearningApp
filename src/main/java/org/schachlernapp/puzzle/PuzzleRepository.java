@@ -84,6 +84,32 @@ public class PuzzleRepository implements AutoCloseable {
         }
     }
 
+    /**
+     * Wie {@link #random}, aber ohne Rating-Bereich und stattdessen hart auf Matt-Puzzles
+     * eines bestimmten Themas eingeschränkt (M9-Endgame-Untermenü, siehe {@link EndgameTheme}):
+     * {@code WHERE themes LIKE '%<theme>%' AND themes LIKE '%mate%'}.
+     */
+    public Optional<Puzzle> randomEndgameMate(String theme) {
+        String sql = """
+                SELECT puzzle_id, fen, moves, rating, themes FROM puzzles
+                WHERE themes LIKE '%' || ? || '%'
+                  AND themes LIKE '%mate%'
+                ORDER BY RANDOM() LIMIT 1
+                """;
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, theme);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (!rs.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(mapRow(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("[PuzzleRepository] Endgame-Abfrage fehlgeschlagen: " + e.getMessage());
+            return Optional.empty();
+        }
+    }
+
     private static Puzzle mapRow(ResultSet rs) throws SQLException {
         List<String> moves = splitOnWhitespace(rs.getString("moves"));
         List<String> themes = splitOnWhitespace(rs.getString("themes"));
