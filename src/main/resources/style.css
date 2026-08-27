@@ -1,6 +1,8 @@
 /*
- * Schach-Lernapp: zentrales Stylesheet (chess.com-ähnliches Farbschema).
- * Eingebunden über scene.getStylesheets().add(...) in Main.java.
+ * Schach-Lernapp: strukturelles Basis-Stylesheet (Layout/Typografie/Feld-Struktur).
+ * Farben kommen bewusst aus dark-theme.css (zweites, danach geladenes Stylesheet in
+ * Main.java) - so bleibt das Farbschema an einer Stelle zentral austauschbar, ohne
+ * Layout-Deklarationen hier anzufassen.
  */
 
 .root {
@@ -35,19 +37,6 @@
     -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-text-fill: #5a5a5a;
-}
-
-/* Figuren (SquareView/BoardDragHandler): beide Seiten nutzen dieselben "gefüllten"
-   Unicode-Glyphen (siehe PieceGlyphs) - nur Füllfarbe + Kontur unterscheiden Weiß/Schwarz.
-   -fx-stroke-width wird zusätzlich dynamisch in Java gesetzt (skaliert mit der Feldgröße). */
-.piece-white {
-    -fx-fill: #f7f5f0;
-    -fx-stroke: #2b2b2b;
-}
-
-.piece-black {
-    -fx-fill: #2b2b2b;
-    -fx-stroke: #000000;
 }
 
 /* --- Seitenpanels (EvalBar/PuzzlePanel/LearnModePanel/OptionsPanel) --- */

@@ -7,7 +7,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
 import javafx.util.Duration;
 import org.schachlernapp.puzzle.PuzzleFeedback;
 import org.schachlernapp.puzzle.PuzzleOutcome;
@@ -60,23 +59,23 @@ public class PuzzlePanel extends VBox {
     public void showFeedback(PuzzleFeedback feedback) {
         switch (feedback.outcome()) {
             case CORRECT_CONTINUE -> {
-                setFeedbackText("Richtig! Weiter geht's...", GOOD_COLOR);
+                setFeedbackText("Richtig! Weiter geht's...", GOOD_STYLE);
                 hideRetryOptions();
                 flashSuccess();
             }
             case CORRECT_SOLVED -> {
-                setFeedbackText("Gelöst! (" + formatDelta(feedback.ratingDelta()) + ")", GOOD_COLOR);
+                setFeedbackText("Gelöst! (" + formatDelta(feedback.ratingDelta()) + ")", GOOD_STYLE);
                 hideRetryOptions();
                 flashSuccess();
             }
             case INCORRECT -> {
                 lastIncorrectFeedback = feedback;
                 setFeedbackText("Falsch - versuch's nochmal oder lass dir die Lösung zeigen. ("
-                        + formatDelta(feedback.ratingDelta()) + ")", BAD_COLOR);
+                        + formatDelta(feedback.ratingDelta()) + ")", BAD_STYLE);
                 showRetryOptions();
             }
             case NO_PUZZLE_FOUND -> {
-                setFeedbackText("Kein passendes Puzzle gefunden - bitte zuerst importieren.", NEUTRAL_COLOR);
+                setFeedbackText("Kein passendes Puzzle gefunden - bitte zuerst importieren.", NEUTRAL_STYLE);
                 hideRetryOptions();
             }
         }
@@ -101,7 +100,7 @@ public class PuzzlePanel extends VBox {
 
     private void handleRetryClicked() {
         hideRetryOptions();
-        setFeedbackText("Nochmal von vorn - mach deinen Zug.", NEUTRAL_COLOR);
+        setFeedbackText("Nochmal von vorn - mach deinen Zug.", NEUTRAL_STYLE);
         if (onRetryRequested != null) {
             onRetryRequested.run();
         }
@@ -109,7 +108,7 @@ public class PuzzlePanel extends VBox {
 
     private void handleRevealClicked() {
         if (lastIncorrectFeedback != null) {
-            setFeedbackText("Die Lösung wäre " + lastIncorrectFeedback.expectedMoveUci() + " gewesen.", BAD_COLOR);
+            setFeedbackText("Die Lösung wäre " + lastIncorrectFeedback.expectedMoveUci() + " gewesen.", BAD_STYLE);
         }
     }
 
@@ -123,16 +122,17 @@ public class PuzzlePanel extends VBox {
         retryBox.setManaged(false);
     }
 
-    private void setFeedbackText(String text, Color color) {
+    private void setFeedbackText(String text, String styleClass) {
         feedbackLabel.setText(text);
-        feedbackLabel.setTextFill(color);
+        feedbackLabel.getStyleClass().removeAll(GOOD_STYLE, BAD_STYLE, NEUTRAL_STYLE);
+        feedbackLabel.getStyleClass().add(styleClass);
     }
 
     private static String formatDelta(int delta) {
         return (delta >= 0 ? "+" : "") + delta;
     }
 
-    private static final Color GOOD_COLOR = Color.web("#2e7d32");
-    private static final Color BAD_COLOR = Color.web("#c62828");
-    private static final Color NEUTRAL_COLOR = Color.web("#666666");
+    private static final String GOOD_STYLE = "text-good";
+    private static final String BAD_STYLE = "text-bad";
+    private static final String NEUTRAL_STYLE = "text-neutral";
 }

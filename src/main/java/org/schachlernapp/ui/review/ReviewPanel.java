@@ -17,8 +17,14 @@ import java.util.function.Consumer;
 /**
  * Dauerhaft sichtbare Review-Zeile (M8), unterhalb des Bretts in {@code Main}: Partie-Auswahl
  * (Datum/Gegner/Ergebnis über {@link ImportedGame#toString()}), Fortschrittsbalken während der
- * Analyse, Eval-Graph + Zugliste danach. Reine Anzeigekomponente, extern verdrahtet (gleiches
- * Muster wie {@code OptionsPanel}/{@code PuzzlePanel}).
+ * Analyse, Eval-Graph danach. Reine Anzeigekomponente, extern verdrahtet (gleiches Muster wie
+ * {@code OptionsPanel}/{@code PuzzlePanel}).
+ *
+ * <p><b>Zugliste (M9-Redesign):</b> {@link #moveListView} wird zwar hier erzeugt/verdrahtet
+ * (Auswahl-Logik bleibt an einer Stelle), aber bewusst NICHT als Kind-Node dieses Panels gerendert -
+ * sonst würde sie zwischen Brett und Menü gequetscht bzw. deren Breiten verändern. Stattdessen holt
+ * {@code Main} sie über {@link #moveListNode()} ab und hängt sie als eigene, gleich hohe Spalte
+ * neben das {@code OptionsPanel}.</p>
  *
  * <p>Hält selbst die "aktuell ausgewählte Stellung" der geladenen Partie ({@link #currentGame}/
  * {@link #currentHalfMoveIndex}) - sowohl {@link EvalGraph}-Klicks, {@link MoveListView}-Klicks als
@@ -43,7 +49,7 @@ public class ReviewPanel extends VBox {
     public ReviewPanel() {
         setSpacing(6);
         setPadding(new Insets(8));
-        getStyleClass().add("side-panel");
+        getStyleClass().addAll("side-panel", "review-pane");
 
         statusLabel.getStyleClass().add("panel-muted");
 
@@ -63,12 +69,17 @@ public class ReviewPanel extends VBox {
         HBox topRow = new HBox(8, gameSelector, statusLabel);
         topRow.setAlignment(Pos.CENTER_LEFT);
 
-        VBox analysisColumn = new VBox(6, topRow, progressBar, evalGraph);
         VBox.setVgrow(evalGraph, Priority.ALWAYS);
-        HBox.setHgrow(analysisColumn, Priority.ALWAYS);
+        getChildren().addAll(topRow, progressBar, evalGraph);
+    }
 
-        HBox mainRow = new HBox(8, analysisColumn, moveListView);
-        getChildren().add(mainRow);
+    /**
+     * Die Zugliste als eigenständiger Node zum Einhängen außerhalb dieses Panels (siehe
+     * Klassen-Javadoc) - {@code ReviewPanel} bleibt Eigentümer/verdrahtet Auswahl-Events weiterhin
+     * selbst über {@link #selectHalfMove}.
+     */
+    public MoveListView moveListNode() {
+        return moveListView;
     }
 
     /** Ersetzt die Liste der wählbaren Partien (neuer Import) und leert eine ggf. angezeigte Analyse. */

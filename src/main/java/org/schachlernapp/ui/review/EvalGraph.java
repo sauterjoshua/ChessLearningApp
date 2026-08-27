@@ -22,12 +22,24 @@ import java.util.function.Consumer;
  *
  * <p>Ein Klick meldet den nächstgelegenen Punkt über {@link #setOnMoveSelected(Consumer)}
  * ({@code -1} = Startstellung, sonst der Halbzug-Index wie in {@link HalfMoveReview#halfMoveIndex()}).</p>
+ *
+ * <p><b>Farb-Ausnahme (Dark-Theme-Redesign):</b> Der Hintergrund kommt regulär über
+ * {@code -fx-background-color} der {@code eval-graph}-Klasse (normale {@link Region}-Eigenschaft,
+ * {@link #canvas} malt dort nur transparent). Linie/Punkte werden aber pixelweise auf dem
+ * {@link Canvas} gezeichnet - CSS kann ein Canvas nicht direkt einfärben (dafür bräuchte es
+ * eigene {@code StyleableProperty}s, unverhältnismäßig für dieses eine Widget). Die Werte unten
+ * sind daher bewusst als einzige Ausnahme von "keine Inline-Farben" fest codiert, exakt
+ * abgestimmt auf {@code dark-theme.css}.</p>
  */
 public class EvalGraph extends Region {
 
     private static final int CP_CAP = 1000;
     private static final double POINT_RADIUS = 3.5;
     private static final double BLUNDER_POINT_RADIUS = 5.5;
+
+    private static final Color LINE_COLOR = Color.web("#9a9a9a");
+    private static final Color GOOD_POINT_COLOR = Color.web("#4caf50");
+    private static final Color BLUNDER_POINT_COLOR = Color.web("#e05252");
 
     private final Canvas canvas = new Canvas();
     private final List<Double> whiteAdvantageFractions = new ArrayList<>();
@@ -79,9 +91,7 @@ public class EvalGraph extends Region {
         GraphicsContext gc = canvas.getGraphicsContext2D();
         double width = canvas.getWidth();
         double height = canvas.getHeight();
-        gc.clearRect(0, 0, width, height);
-        gc.setFill(Color.web("#fafafa"));
-        gc.fillRect(0, 0, width, height);
+        gc.clearRect(0, 0, width, height); // Hintergrund kommt von der Region selbst (-fx-background-color)
 
         int pointCount = whiteAdvantageFractions.size();
         if (pointCount < 2 || width <= 0 || height <= 0) {
@@ -89,7 +99,7 @@ public class EvalGraph extends Region {
         }
         double stepX = width / (pointCount - 1);
 
-        gc.setStroke(Color.web("#555555"));
+        gc.setStroke(LINE_COLOR);
         gc.setLineWidth(1.5);
         gc.beginPath();
         for (int i = 0; i < pointCount; i++) {
@@ -108,7 +118,7 @@ public class EvalGraph extends Region {
             double y = whiteAdvantageFractions.get(i) * height;
             boolean isBlunder = i > 0 && qualities.get(i - 1) == MoveQuality.BLUNDER;
             double radius = isBlunder ? BLUNDER_POINT_RADIUS : POINT_RADIUS;
-            gc.setFill(isBlunder ? Color.web("#c62828") : Color.web("#2e7d32"));
+            gc.setFill(isBlunder ? BLUNDER_POINT_COLOR : GOOD_POINT_COLOR);
             gc.fillOval(x - radius, y - radius, radius * 2, radius * 2);
         }
     }

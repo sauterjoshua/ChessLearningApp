@@ -34,6 +34,17 @@
 - Fehlerbehandlung, Performance-Check
 - Packaging (ausführbares JAR)
 
+## M8: Spiel-Analyse (chess.com-Import)
+- Eigene Partien eines chess.com-Users für Monat/Jahr importieren (öffentliche API, PGN-Parsing)
+- Partie Halbzug für Halbzug mit Stockfish analysieren (Fortschrittsanzeige)
+- Eval-Graph + Zugliste zur Partie, Navigation per Klick oder Pfeiltasten
+- Gut/Ungenau/Fehler/Blunder-Auswertung für die eigenen Züge
+
+## M9: Endgame-Untermenü
+- Eigenes Untermenü im Options-Panel (Haupt-/Untermenü-Umschaltung, erweiterbar für z.B. Eröffnung)
+- Thematisch gefilterte Matt-/Promotion-Puzzles aus der bestehenden Lichess-Datenbank
+
 ## Offen
 - Bibliothekswahl (chesslib vs. Alternativen)
 - JavaFX vs. Swing für UI
+- M6 (eigene Lektionen zu Eröffnungen/Endspielen als JSON/DB) – noch nicht begonnen

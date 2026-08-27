@@ -24,6 +24,9 @@ public class MoveListView extends VBox {
     private boolean updatingSelectionProgrammatically;
 
     public MoveListView() {
+        // Kein eigener Panel-Rahmen auf der VBox selbst - die ListView füllt sie vollständig aus
+        // und bringt über die .list-view-Klasse in dark-theme.css bereits Hintergrund/Rahmen mit
+        // (sonst gäbe es einen doppelten, verschachtelten Rahmen).
         setPrefWidth(160);
         listView.setPrefWidth(160);
         listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);

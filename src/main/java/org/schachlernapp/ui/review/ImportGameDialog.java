@@ -12,7 +12,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
-import javafx.scene.paint.Color;
 import javafx.util.StringConverter;
 import org.schachlernapp.review.GameImportException;
 import org.schachlernapp.review.GameImportService;
@@ -75,7 +74,7 @@ public class ImportGameDialog {
             }
         });
 
-        errorLabel.setTextFill(Color.web("#c62828"));
+        errorLabel.getStyleClass().add("text-bad");
         errorLabel.setWrapText(true);
         errorLabel.setVisible(false);
         errorLabel.setManaged(false);

@@ -4,7 +4,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
 import org.schachlernapp.analysis.MoveFeedback;
 import org.schachlernapp.analysis.MoveQuality;
 
@@ -17,6 +16,9 @@ import org.schachlernapp.analysis.MoveQuality;
  * gebaut werden muss.
  */
 public class LearnModePanel extends VBox {
+
+    private static final String[] QUALITY_STYLE_CLASSES =
+            {"text-good", "text-inaccuracy", "text-mistake", "text-blunder"};
 
     private final Label feedbackLabel = new Label("Mach einen Zug, um Feedback zu erhalten.");
     private final Label suggestionLabel = new Label();
@@ -39,7 +41,7 @@ public class LearnModePanel extends VBox {
 
     public void showFeedback(MoveFeedback feedback) {
         feedbackLabel.setText(feedback.message());
-        feedbackLabel.setTextFill(colorFor(feedback.quality()));
+        setQualityStyleClass(feedback.quality());
         suggestionLabel.setText(feedback.suggestedMoveSan() != null
                 ? "Engine-Vorschlag: " + feedback.suggestedMoveSan()
                 : "");
@@ -57,17 +59,18 @@ public class LearnModePanel extends VBox {
      */
     public void showReviewSummary(String message, int good, int inaccuracy, int mistake, int blunder) {
         feedbackLabel.setText(message);
-        feedbackLabel.setTextFill(Color.web("#333333"));
+        feedbackLabel.getStyleClass().removeAll(QUALITY_STYLE_CLASSES);
         suggestionLabel.setText("");
         updateTally(good, inaccuracy, mistake, blunder);
     }
 
-    private static Color colorFor(MoveQuality quality) {
-        return switch (quality) {
-            case GOOD -> Color.web("#2e7d32");
-            case INACCURACY -> Color.web("#c9a227");
-            case MISTAKE -> Color.web("#e07b1f");
-            case BLUNDER -> Color.web("#c62828");
-        };
+    private void setQualityStyleClass(MoveQuality quality) {
+        feedbackLabel.getStyleClass().removeAll(QUALITY_STYLE_CLASSES);
+        feedbackLabel.getStyleClass().add(switch (quality) {
+            case GOOD -> "text-good";
+            case INACCURACY -> "text-inaccuracy";
+            case MISTAKE -> "text-mistake";
+            case BLUNDER -> "text-blunder";
+        });
     }
 }

@@ -1,14 +1,12 @@
 package org.schachlernapp.ui.board;
 
 import com.github.bhlangonijr.chesslib.Piece;
-import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import javafx.geometry.Point2D;
-import javafx.geometry.VPos;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
-import javafx.scene.text.Text;
 
 import java.util.Set;
 
@@ -35,7 +33,7 @@ final class BoardDragHandler {
     private final Pane dragLayer;
 
     private Square originSquare;
-    private Text floatingPiece;
+    private ImageView floatingPiece;
     private Set<Square> highlightedTargets = Set.of();
 
     BoardDragHandler(BoardView boardView, BoardController controller) {
@@ -72,20 +70,16 @@ final class BoardDragHandler {
             boardView.squareViewFor(target).setLegalTarget(true);
         }
 
-        source.setGlyphVisible(false);
-        floatingPiece = new Text(PieceGlyphs.of(piece));
-        floatingPiece.getStyleClass().add(piece.getPieceSide() == Side.WHITE ? "piece-white" : "piece-black");
-        double fontSize = Math.max(8, boardView.getSquareSize() * SquareView.PIECE_FONT_RATIO);
-        floatingPiece.setStyle("-fx-font-size: " + fontSize + "px;");
-        floatingPiece.setStrokeWidth(Math.max(0.6, fontSize * SquareView.PIECE_STROKE_RATIO));
-        floatingPiece.setTextOrigin(VPos.CENTER);
+        source.setPieceVisible(false);
+        floatingPiece = new ImageView(PieceImages.of(piece));
+        double size = Math.max(8, boardView.getSquareSize() * SquareView.PIECE_SIZE_RATIO);
+        floatingPiece.setFitWidth(size);
+        floatingPiece.setFitHeight(size);
+        floatingPiece.setPreserveRatio(true);
         floatingPiece.setMouseTransparent(true);
         dragLayer.getChildren().add(floatingPiece);
-        // CSS synchron erzwingen - sonst liefert getBoundsInLocal() vor dem ersten Layout-Pulse
-        // noch (0,0) und die Figur würde beim ersten Frame verschoben aufblitzen. Text braucht
-        // (anders als das vorherige Label) kein autosize() - seine Bounds ergeben sich direkt
-        // aus Text+Font, ohne separaten Resize-Schritt.
-        floatingPiece.applyCss();
+        // Anders als beim vorherigen Text-Glyph ergeben sich fitWidth/fitHeight sofort aus reinen
+        // Properties, nicht aus einem CSS-Layout-Pass - kein applyCss()/Bounds-Timing-Problem mehr.
         positionFloatingPiece(event);
     }
 
@@ -115,9 +109,10 @@ final class BoardDragHandler {
             boardView.squareViewFor(target).setLegalTarget(false);
         }
         if (!moved) {
-            // Erfolgreicher Zug lässt BoardController.render() ohnehin alle Glyphen neu setzen
-            // (inkl. sichtbar machen); bei Ablehnung muss die Ursprungsfigur manuell zurückgeholt werden.
-            boardView.squareViewFor(originSquare).setGlyphVisible(true);
+            // Erfolgreicher Zug lässt BoardController.render() ohnehin alle Figuren-Bilder neu
+            // setzen (inkl. sichtbar machen); bei Ablehnung muss die Ursprungsfigur manuell
+            // zurückgeholt werden.
+            boardView.squareViewFor(originSquare).setPieceVisible(true);
         }
 
         originSquare = null;

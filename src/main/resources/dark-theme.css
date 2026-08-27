@@ -1,0 +1,257 @@
+/*
+ * Schach-Lernapp: Dark Theme (Claude/Anthropic-inspiriertes Farbschema).
+ * Wird NACH style.css geladen (siehe Main.java) und überschreibt dessen Farben per
+ * Selektor-Wiederholung - style.css bleibt für Struktur/Layout zuständig, diese Datei
+ * ausschließlich für Farben. Einzige zentrale Stelle für alle Farbwerte der App.
+ *
+ * Basis-Grautöne (Bereichs-Unterscheidung): #1a1a1a (Brett) < #232323 (Menü/Review) <
+ * #2b2b2b (Eval-Leiste/übrige Panels). Text: #e0e0e0. Akzent: #c96442 (gedämpftes
+ * Terrakotta/Orange).
+ */
+
+.root {
+    -fx-background-color: #1a1a1a;
+    -fx-text-fill: #e0e0e0;
+    /* Modena-interne Variablen - steuern den Fokus-Ring app-weit auf allen Standard-Controls,
+       ohne jeden Control-Typ einzeln überschreiben zu müssen. */
+    -fx-focus-color: #c96442;
+    -fx-faint-focus-color: #c9644233;
+    -fx-accent: #c96442;
+}
+
+.label {
+    -fx-text-fill: #e0e0e0;
+}
+
+/* --- Bereichs-Unterscheidung: Brett/Menü/Eval-Leiste/Review bekommen je einen eigenen,
+   leicht unterschiedlichen Grauton (Aufgabe 2) --- */
+
+.board-pane {
+    -fx-background-color: #1a1a1a;
+}
+
+.menu-pane {
+    -fx-background-color: #232323;
+}
+
+.eval-pane {
+    -fx-background-color: #2b2b2b;
+}
+
+.review-pane {
+    -fx-background-color: #232323;
+}
+
+/* Brett (SquareView): bewusst KEINE Überschreibung hier - die Original-Farben (Creme/Grün,
+   gelbe Auswahl, grüner Zielfeld-Rahmen) aus style.css bleiben unverändert, nur die Umgebung
+   ringsum (.board-pane) folgt dem Dark Theme. */
+
+/* --- Seitenpanels --- */
+
+.side-panel {
+    -fx-background-color: #232323;
+    -fx-border-color: #3a3a3a;
+}
+
+.panel-heading {
+    -fx-text-fill: #e0e0e0;
+}
+
+.panel-muted {
+    -fx-text-fill: #9a9a9a;
+}
+
+.eval-bar {
+    -fx-border-color: #3a3a3a;
+}
+
+.eval-bar-label {
+    -fx-text-fill: #cfcfcf;
+}
+
+/* Anteile des Eval-Balkens (EvalBar) - ersetzt die früheren Inline-Styles in Java */
+.eval-bar-white-part {
+    -fx-background-color: #d8d8d8;
+}
+
+.eval-bar-black-part {
+    -fx-background-color: #262626;
+}
+
+.puzzle-flash-success {
+    -fx-border-color: #4caf50;
+}
+
+.eval-graph {
+    -fx-background-color: #1f1f1f;
+    -fx-border-color: #3a3a3a;
+}
+
+/* --- Bewertungs-/Ergebnis-Text (LearnModePanel/PuzzlePanel/ImportGameDialog) - ersetzt die
+   früheren Inline-Farben (Label.setTextFill(Color...)) in Java --- */
+
+.text-good {
+    -fx-text-fill: #4caf50;
+}
+
+.text-inaccuracy {
+    -fx-text-fill: #d1a53d;
+}
+
+.text-mistake {
+    -fx-text-fill: #e0883a;
+}
+
+.text-bad,
+.text-blunder {
+    -fx-text-fill: #e05252;
+}
+
+.text-neutral {
+    -fx-text-fill: #9a9a9a;
+}
+
+/* --- Buttons --- */
+
+.button {
+    -fx-cursor: hand;
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e0e0e0;
+    -fx-border-color: #3a3a3a;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.button:hover {
+    -fx-background-color: #c96442;
+    -fx-border-color: #c96442;
+    -fx-text-fill: #1a1a1a;
+}
+
+.button:armed {
+    -fx-background-color: #a9532f;
+    -fx-border-color: #a9532f;
+}
+
+.button:disabled {
+    -fx-opacity: 0.5;
+}
+
+/* --- ComboBox (Partie-Auswahl im ReviewPanel, Jahr/Monat im Import-Dialog) --- */
+
+.combo-box {
+    -fx-background-color: #2b2b2b;
+    -fx-border-color: #3a3a3a;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-mark-color: #e0e0e0;
+}
+
+.combo-box .list-cell {
+    -fx-text-fill: #e0e0e0;
+    -fx-background-color: transparent;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #2b2b2b;
+    -fx-border-color: #3a3a3a;
+}
+
+.combo-box-popup .list-view .list-cell {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e0e0e0;
+}
+
+.combo-box-popup .list-view .list-cell:hover {
+    -fx-background-color: #3a3a3a;
+}
+
+.combo-box-popup .list-view .list-cell:filled:selected {
+    -fx-background-color: #c96442;
+    -fx-text-fill: #1a1a1a;
+}
+
+/* --- ListView (MoveListView) --- */
+
+.list-view {
+    -fx-background-color: #232323;
+    -fx-border-color: #3a3a3a;
+}
+
+.list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e0e0e0;
+}
+
+.list-view .list-cell:filled:hover {
+    -fx-background-color: #2f2f2f;
+}
+
+.list-view .list-cell:filled:selected {
+    -fx-background-color: #c96442;
+    -fx-text-fill: #1a1a1a;
+}
+
+/* --- ProgressBar (Review-Analyse-Fortschritt) --- */
+
+.progress-bar > .track {
+    -fx-background-color: #2b2b2b;
+    -fx-background-radius: 4;
+}
+
+.progress-bar > .bar {
+    -fx-background-color: #c96442;
+    -fx-background-radius: 4;
+}
+
+/* --- TextField (Import-Dialog: Username) --- */
+
+.text-field {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e0e0e0;
+    -fx-border-color: #3a3a3a;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-prompt-text-fill: #6f6f6f;
+}
+
+/* --- ScrollBar (u.a. ListView-Overflow) --- */
+
+.scroll-bar {
+    -fx-background-color: #232323;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #4a4a4a;
+    -fx-background-radius: 4;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: #5a5a5a;
+}
+
+/* --- Tooltip --- */
+
+.tooltip {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #e0e0e0;
+    -fx-border-color: #3a3a3a;
+}
+
+/* --- Dialog/Alert (ImportGameDialog, "Partie beendet"-Dialog aus M2, UiAlerts) --- */
+
+.dialog-pane {
+    -fx-background-color: #232323;
+}
+
+.dialog-pane > .header-panel {
+    -fx-background-color: #2b2b2b;
+}
+
+.dialog-pane > .header-panel .label {
+    -fx-text-fill: #e0e0e0;
+}
+
+.dialog-pane .content.label {
+    -fx-text-fill: #e0e0e0;
+}

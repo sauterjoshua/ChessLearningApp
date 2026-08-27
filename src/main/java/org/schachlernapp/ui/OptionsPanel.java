@@ -38,7 +38,7 @@ public class OptionsPanel extends VBox {
         setPadding(new Insets(8));
         setAlignment(Pos.TOP_CENTER);
         setPrefWidth(160);
-        getStyleClass().add("side-panel");
+        getStyleClass().addAll("side-panel", "menu-pane");
 
         openingButton.setDisable(true); // spätere Implementierung
 
