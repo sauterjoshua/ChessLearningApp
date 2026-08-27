@@ -5,22 +5,31 @@ import org.schachlernapp.analysis.EvaluationController;
 import org.schachlernapp.analysis.LearnModeController;
 import org.schachlernapp.analysis.MoveQuality;
 import org.schachlernapp.chess.ChessLibCheck;
+import org.schachlernapp.engine.EngineEvaluationException;
 import org.schachlernapp.engine.EngineEvaluator;
 import org.schachlernapp.engine.StockfishEngine;
 import org.schachlernapp.progress.ProgressData;
 import org.schachlernapp.progress.ProgressStore;
+import org.schachlernapp.review.GameImportService;
+import org.schachlernapp.review.GameReview;
+import org.schachlernapp.review.GameReviewEngine;
+import org.schachlernapp.review.ImportedGame;
 import org.schachlernapp.ui.OptionsPanel;
 import org.schachlernapp.ui.UiAlerts;
 import org.schachlernapp.ui.board.BoardController;
 import org.schachlernapp.ui.board.BoardView;
+import org.schachlernapp.ui.board.ChangeReason;
 import org.schachlernapp.ui.eval.EvalBar;
 import org.schachlernapp.ui.learn.LearnModePanel;
 import org.schachlernapp.ui.puzzle.PuzzlePanel;
+import org.schachlernapp.ui.review.ImportGameDialog;
+import org.schachlernapp.ui.review.ReviewPanel;
 import org.schachlernapp.puzzle.PuzzleOutcome;
 import org.schachlernapp.puzzle.PuzzleRatingService;
 import org.schachlernapp.puzzle.PuzzleRepository;
 import org.schachlernapp.puzzle.PuzzleSession;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.layout.HBox;
@@ -30,6 +39,7 @@ import javafx.stage.Stage;
 
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -55,6 +65,9 @@ public class Main extends Application {
     private volatile LearnModeController learnModeController;
     private volatile ProgressData progress;
 
+    /** Nur auf dem JavaFX-Thread gelesen/geschrieben (Partie-Auswahl + Graph-Klick laufen beide dort) - siehe M8. */
+    private ImportedGame currentReviewedGame;
+
     @Override
     public void start(Stage primaryStage) {
         // Fallback für nicht-JavaFX-konformes Beenden (kill, Terminal zu, Prozessmanager) -
@@ -71,6 +84,8 @@ public class Main extends Application {
         LearnModePanel learnModePanel = new LearnModePanel();
         PuzzlePanel puzzlePanel = new PuzzlePanel();
         OptionsPanel optionsPanel = new OptionsPanel();
+        ReviewPanel reviewPanel = new ReviewPanel();
+        GameImportService gameImportService = new GameImportService();
 
         // Feedback/Ratings (LearnModePanel + PuzzlePanel) in einer Leiste ÜBER dem Brett,
         // Optionen (OptionsPanel) als eigene Spalte RECHTS neben dem Brett.
@@ -84,7 +99,18 @@ public class Main extends Application {
         boardRow.setAlignment(Pos.CENTER);
         HBox.setHgrow(boardView, Priority.ALWAYS);
 
-        VBox root = new VBox(8, feedbackRow, boardRow);
+        // M8: Import-Dialog braucht keine Stockfish-Verbindung, daher schon hier verdrahtet (nicht erst
+        // in runStartupChecks, das nur für Stockfish-/Puzzle-DB-abhängige Features gilt). Die Analyse
+        // selbst (startGameReview) prüft engineEvaluator zur Auswahl-Zeit selbst und meldet sich mit
+        // einem Fehlerdialog, falls Stockfish (noch) nicht verfügbar ist.
+        optionsPanel.setOnImportGameRequested(() -> {
+            ImportGameDialog dialog = new ImportGameDialog(gameImportService);
+            dialog.showAndWait().ifPresent(reviewPanel::setGames);
+        });
+        reviewPanel.setOnGameSelected(game -> startGameReview(reviewPanel, game));
+        reviewPanel.setOnMoveSelected(halfMoveIndex -> jumpToReviewPosition(boardController, halfMoveIndex));
+
+        VBox root = new VBox(8, feedbackRow, boardRow, reviewPanel);
         VBox.setVgrow(boardRow, Priority.ALWAYS);
 
         Scene scene = new Scene(root, 1200, 700);
@@ -184,6 +210,52 @@ public class Main extends Application {
         evaluationController.evaluateCurrentPosition();
 
         System.out.println("=== Startdiagnose abgeschlossen ===");
+    }
+
+    /**
+     * Startet die Partie-Analyse (M8) für eine per {@link ImportGameDialog} importierte Partie.
+     * Läuft in einem eigenen Hintergrund-Thread, da {@link GameReviewEngine#review} pro Halbzug
+     * blockierend eine echte Stockfish-Suche macht (analog {@code PuzzleSession.loadNewPuzzleAsync}).
+     * Nutzt bewusst denselben {@link #engineEvaluator} wie die Live-Auswertung (siehe
+     * {@code GameReviewEngine}-Javadoc) - ist die Engine (noch) nicht verfügbar, wird das dem User
+     * gemeldet statt die Analyse stillschweigend zu überspringen.
+     */
+    private void startGameReview(ReviewPanel reviewPanel, ImportedGame game) {
+        currentReviewedGame = game;
+        EngineEvaluator evaluator = this.engineEvaluator;
+        if (evaluator == null) {
+            UiAlerts.showError("Stockfish nicht verfügbar",
+                    "Die Partie-Analyse benötigt die Schach-Engine, die aktuell nicht verfügbar ist.");
+            return;
+        }
+
+        reviewPanel.showAnalysisStarted();
+        GameReviewEngine reviewEngine = new GameReviewEngine(evaluator);
+        Thread analysisThread = new Thread(() -> {
+            try {
+                GameReview review = reviewEngine.review(game,
+                        (analyzed, total) -> Platform.runLater(() -> reviewPanel.updateProgress(analyzed, total)));
+                Platform.runLater(() -> reviewPanel.showReview(review));
+            } catch (EngineEvaluationException e) {
+                UiAlerts.showError("Analyse fehlgeschlagen",
+                        "Die Partie-Analyse ist fehlgeschlagen: " + e.getMessage());
+            }
+        }, "game-review-analysis");
+        analysisThread.setDaemon(true);
+        analysisThread.start();
+    }
+
+    /** Klick auf einen Punkt im Eval-Graph (M8): {@code -1} = Startstellung, sonst Halbzug-Index. */
+    private void jumpToReviewPosition(BoardController boardController, int halfMoveIndex) {
+        ImportedGame game = currentReviewedGame;
+        if (game == null) {
+            return;
+        }
+        List<String> fens = game.fens();
+        int fenIndex = halfMoveIndex + 1;
+        if (fenIndex >= 0 && fenIndex < fens.size()) {
+            boardController.loadFen(fens.get(fenIndex), ChangeReason.REVIEW);
+        }
     }
 
     @Override

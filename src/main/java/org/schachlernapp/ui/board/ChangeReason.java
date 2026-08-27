@@ -10,9 +10,14 @@ package org.schachlernapp.ui.board;
  * Züge (Lichess-Setup-Zug + erzwungene Gegenantworten) - fällt für
  * {@code EvaluationController} automatisch in denselben "kein moverSide"-Zweig
  * wie {@link #RESET}, sodass diese Züge nie als User-Blunder gewertet werden.</p>
+ *
+ * <p>{@link #REVIEW} (M8): Sprung zu einer Stellung aus einer importierten/analysierten
+ * Partie (Klick auf einen Zug/Punkt im Eval-Graph). Fällt aus demselben Grund wie
+ * {@link #RESET}/{@link #PUZZLE} nicht in die Blunder-Auswertung.</p>
  */
 public enum ChangeReason {
     MOVE,
     RESET,
-    PUZZLE
+    PUZZLE,
+    REVIEW
 }

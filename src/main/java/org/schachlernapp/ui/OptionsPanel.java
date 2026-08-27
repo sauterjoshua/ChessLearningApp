@@ -18,6 +18,7 @@ public class OptionsPanel extends VBox {
     private final Button newGameButton = new Button("Neues Spiel");
     private final Button newPuzzleButton = new Button("Neues Puzzle");
     private final Button practiceButton = new Button("Üben");
+    private final Button importGameButton = new Button("Partie importieren");
 
     public OptionsPanel() {
         setSpacing(8);
@@ -28,11 +29,11 @@ public class OptionsPanel extends VBox {
 
         practiceButton.setDisable(true); // spätere Implementierung
 
-        for (Button button : new Button[] {newGameButton, newPuzzleButton, practiceButton}) {
+        for (Button button : new Button[] {newGameButton, newPuzzleButton, practiceButton, importGameButton}) {
             button.setMaxWidth(Double.MAX_VALUE);
         }
 
-        getChildren().addAll(newGameButton, newPuzzleButton, practiceButton);
+        getChildren().addAll(newGameButton, newPuzzleButton, practiceButton, importGameButton);
     }
 
     public void setOnNewGameRequested(Runnable action) {
@@ -41,5 +42,10 @@ public class OptionsPanel extends VBox {
 
     public void setOnNewPuzzleRequested(Runnable action) {
         newPuzzleButton.setOnAction(e -> action.run());
+    }
+
+    /** M8: öffnet den chess.com-Import-Dialog. */
+    public void setOnImportGameRequested(Runnable action) {
+        importGameButton.setOnAction(e -> action.run());
     }
 }

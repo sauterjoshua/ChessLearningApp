@@ -42,8 +42,13 @@ public class BoardController {
     }
 
     public void loadFen(String fen) {
+        loadFen(fen, ChangeReason.RESET);
+    }
+
+    /** Wie {@link #loadFen(String)}, aber mit explizitem Grund (M8: {@link ChangeReason#REVIEW} für Partie-Analyse-Sprünge). */
+    public void loadFen(String fen, ChangeReason reason) {
         board.loadFromFen(fen);
-        fireChanged(ChangeReason.RESET);
+        fireChanged(reason);
     }
 
     public Piece pieceAt(Square square) {
