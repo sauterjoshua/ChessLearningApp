@@ -13,6 +13,7 @@ import org.schachlernapp.progress.ProgressStore;
 import org.schachlernapp.review.GameImportService;
 import org.schachlernapp.review.GameReview;
 import org.schachlernapp.review.GameReviewEngine;
+import org.schachlernapp.review.HalfMoveReview;
 import org.schachlernapp.review.ImportedGame;
 import org.schachlernapp.ui.OptionsPanel;
 import org.schachlernapp.ui.UiAlerts;
@@ -32,6 +33,8 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -39,7 +42,6 @@ import javafx.stage.Stage;
 
 import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -64,9 +66,6 @@ public class Main extends Application {
     private volatile PuzzleSession puzzleSession;
     private volatile LearnModeController learnModeController;
     private volatile ProgressData progress;
-
-    /** Nur auf dem JavaFX-Thread gelesen/geschrieben (Partie-Auswahl + Graph-Klick laufen beide dort) - siehe M8. */
-    private ImportedGame currentReviewedGame;
 
     @Override
     public void start(Stage primaryStage) {
@@ -107,14 +106,24 @@ public class Main extends Application {
             ImportGameDialog dialog = new ImportGameDialog(gameImportService);
             dialog.showAndWait().ifPresent(reviewPanel::setGames);
         });
-        reviewPanel.setOnGameSelected(game -> startGameReview(reviewPanel, game));
-        reviewPanel.setOnMoveSelected(halfMoveIndex -> jumpToReviewPosition(boardController, halfMoveIndex));
+        reviewPanel.setOnGameSelected(game -> startGameReview(reviewPanel, learnModePanel, game));
+        reviewPanel.setOnPositionSelected(fen -> boardController.loadFen(fen, ChangeReason.REVIEW));
 
         VBox root = new VBox(8, feedbackRow, boardRow, reviewPanel);
         VBox.setVgrow(boardRow, Priority.ALWAYS);
 
         Scene scene = new Scene(root, 1200, 700);
         scene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        // M8.1: Pfeiltasten navigieren während der Partie-Analyse einen Halbzug vor/zurück - global auf
+        // der Scene, da im Hauptfenster (anders als im Import-Dialog) keine Textfelder/Slider existieren,
+        // die Links/Rechts selbst sinnvoll belegen; ReviewPanel.stepHalfMove ist ohne geladene Partie ein No-op.
+        scene.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.LEFT) {
+                reviewPanel.stepHalfMove(-1);
+            } else if (event.getCode() == KeyCode.RIGHT) {
+                reviewPanel.stepHalfMove(1);
+            }
+        });
         primaryStage.setScene(scene);
         primaryStage.setMinWidth(600);
         primaryStage.setMinHeight(320);
@@ -220,8 +229,7 @@ public class Main extends Application {
      * {@code GameReviewEngine}-Javadoc) - ist die Engine (noch) nicht verfügbar, wird das dem User
      * gemeldet statt die Analyse stillschweigend zu überspringen.
      */
-    private void startGameReview(ReviewPanel reviewPanel, ImportedGame game) {
-        currentReviewedGame = game;
+    private void startGameReview(ReviewPanel reviewPanel, LearnModePanel learnModePanel, ImportedGame game) {
         EngineEvaluator evaluator = this.engineEvaluator;
         if (evaluator == null) {
             UiAlerts.showError("Stockfish nicht verfügbar",
@@ -230,12 +238,18 @@ public class Main extends Application {
         }
 
         reviewPanel.showAnalysisStarted();
+        // Ersetzt den sonst live-lern-modus-bezogenen "Mach einen Zug..."-Platzhalter/die letzte
+        // Analyse-Tally, solange die neue Analyse noch läuft.
+        learnModePanel.showReviewSummary("Analysiere...", 0, 0, 0, 0);
         GameReviewEngine reviewEngine = new GameReviewEngine(evaluator);
         Thread analysisThread = new Thread(() -> {
             try {
                 GameReview review = reviewEngine.review(game,
                         (analyzed, total) -> Platform.runLater(() -> reviewPanel.updateProgress(analyzed, total)));
-                Platform.runLater(() -> reviewPanel.showReview(review));
+                Platform.runLater(() -> {
+                    reviewPanel.showReview(review);
+                    showReviewTally(learnModePanel, review);
+                });
             } catch (EngineEvaluationException e) {
                 UiAlerts.showError("Analyse fehlgeschlagen",
                         "Die Partie-Analyse ist fehlgeschlagen: " + e.getMessage());
@@ -245,17 +259,26 @@ public class Main extends Application {
         analysisThread.start();
     }
 
-    /** Klick auf einen Punkt im Eval-Graph (M8): {@code -1} = Startstellung, sonst Halbzug-Index. */
-    private void jumpToReviewPosition(BoardController boardController, int halfMoveIndex) {
-        ImportedGame game = currentReviewedGame;
-        if (game == null) {
-            return;
+    /**
+     * Zeigt die Gut/Ungenau/Fehler/Blunder-Tally der Analyse im (sonst für den Live-Lern-Modus
+     * genutzten) {@link LearnModePanel} an - gezählt werden nur die Halbzüge der Farbe, mit der
+     * der User laut {@link ImportedGame#userSide()} gespielt hat, nicht die des Gegners.
+     */
+    private static void showReviewTally(LearnModePanel learnModePanel, GameReview review) {
+        Side userSide = review.game().userSide();
+        Map<MoveQuality, Integer> counts = new EnumMap<>(MoveQuality.class);
+        for (MoveQuality quality : MoveQuality.values()) {
+            counts.put(quality, 0);
         }
-        List<String> fens = game.fens();
-        int fenIndex = halfMoveIndex + 1;
-        if (fenIndex >= 0 && fenIndex < fens.size()) {
-            boardController.loadFen(fens.get(fenIndex), ChangeReason.REVIEW);
+        for (HalfMoveReview move : review.moves()) {
+            Side moverSide = move.halfMoveIndex() % 2 == 0 ? Side.WHITE : Side.BLACK;
+            if (moverSide == userSide) {
+                counts.merge(move.quality(), 1, Integer::sum);
+            }
         }
+        learnModePanel.showReviewSummary("Partie-Analyse abgeschlossen.",
+                counts.get(MoveQuality.GOOD), counts.get(MoveQuality.INACCURACY),
+                counts.get(MoveQuality.MISTAKE), counts.get(MoveQuality.BLUNDER));
     }
 
     @Override

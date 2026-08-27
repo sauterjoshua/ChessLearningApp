@@ -50,6 +50,18 @@ public class LearnModePanel extends VBox {
                 good, inaccuracy, mistake, blunder));
     }
 
+    /**
+     * M8: Zusammenfassung einer Partie-Analyse statt Live-Lern-Modus-Feedback zu einem einzelnen
+     * Zug - {@code message} ersetzt den sonst per {@link #showFeedback} gesetzten Text (der beim
+     * Öffnen einer Analyse sinnfrei "Mach einen Zug..." zeigen würde), Tally-Zahlen wie gewohnt.
+     */
+    public void showReviewSummary(String message, int good, int inaccuracy, int mistake, int blunder) {
+        feedbackLabel.setText(message);
+        feedbackLabel.setTextFill(Color.web("#333333"));
+        suggestionLabel.setText("");
+        updateTally(good, inaccuracy, mistake, blunder);
+    }
+
     private static Color colorFor(MoveQuality quality) {
         return switch (quality) {
             case GOOD -> Color.web("#2e7d32");

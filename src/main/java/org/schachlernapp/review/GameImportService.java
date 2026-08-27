@@ -86,8 +86,13 @@ public class GameImportService {
             return List.of();
         }
 
+        // chess.com liefert das Monats-Archiv chronologisch aufsteigend (älteste zuerst) - für die
+        // Partie-Auswahl im ReviewPanel-Dropdown ist "neueste zuerst" die erwartete Reihenfolge.
+        List<ChessComGameDto> gamesNewestFirst = new ArrayList<>(parsed.games);
+        gamesNewestFirst.sort((a, b) -> Long.compare(b.end_time, a.end_time));
+
         List<ImportedGame> result = new ArrayList<>();
-        for (ChessComGameDto dto : parsed.games) {
+        for (ChessComGameDto dto : gamesNewestFirst) {
             if (dto.pgn == null || dto.pgn.isBlank()) {
                 continue; // z.B. noch laufende Partien haben teils kein PGN
             }
