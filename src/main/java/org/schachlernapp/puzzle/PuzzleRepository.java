@@ -87,17 +87,29 @@ public class PuzzleRepository implements AutoCloseable {
     /**
      * Wie {@link #random}, aber ohne Rating-Bereich und stattdessen hart auf Matt-Puzzles
      * eines bestimmten Themas eingeschränkt (M9-Endgame-Untermenü, siehe {@link EndgameTheme}):
-     * {@code WHERE themes LIKE '%<theme>%' AND themes LIKE '%mate%'}.
+     * {@code WHERE themes LIKE '%<theme>%' AND themes LIKE '%mate%'}. Dünner Wrapper um
+     * {@link #randomByThemes(String, String)} mit {@code "mate"} als zweitem Kriterium.
      */
     public Optional<Puzzle> randomEndgameMate(String theme) {
+        return randomByThemes(theme, "mate");
+    }
+
+    /**
+     * Wie {@link #random}, aber ohne Rating-Bereich und stattdessen hart auf Puzzles eingeschränkt,
+     * deren {@code themes}-Spalte BEIDE übergebenen Theme-Substrings enthält (M9, z.B. Endgame +
+     * Matt-Typ oder - für "Bauernendspiel (Promotion)" - Endgame + Promotion):
+     * {@code WHERE themes LIKE '%<theme1>%' AND themes LIKE '%<theme2>%'}.
+     */
+    public Optional<Puzzle> randomByThemes(String theme1, String theme2) {
         String sql = """
                 SELECT puzzle_id, fen, moves, rating, themes FROM puzzles
                 WHERE themes LIKE '%' || ? || '%'
-                  AND themes LIKE '%mate%'
+                  AND themes LIKE '%' || ? || '%'
                 ORDER BY RANDOM() LIMIT 1
                 """;
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, theme);
+            statement.setString(1, theme1);
+            statement.setString(2, theme2);
             try (ResultSet rs = statement.executeQuery()) {
                 if (!rs.next()) {
                     return Optional.empty();

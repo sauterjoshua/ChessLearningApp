@@ -96,12 +96,13 @@ public class PuzzleSession {
     }
 
     /**
-     * M9-Endgame-Untermenü: lädt ein Matt-Puzzle des gewählten Endspiel-Themas, unabhängig vom
-     * User-Rating (siehe {@link PuzzleRepository#randomEndgameMate(String)}). Ablauf danach
-     * identisch zu {@link #loadNewPuzzleAsync()} (gleiches {@code PuzzlePanel}-Feedback).
+     * M9-Endgame-Untermenü: lädt ein Puzzle des gewählten Endspiel-Themas (beide Theme-Schlüssel
+     * aus {@code theme} per UND verknüpft, z.B. Endspiel-Typ + Matt oder + Promotion), unabhängig
+     * vom User-Rating (siehe {@link PuzzleRepository#randomByThemes(String, String)}). Ablauf
+     * danach identisch zu {@link #loadNewPuzzleAsync()} (gleiches {@code PuzzlePanel}-Feedback).
      */
     public void loadEndgamePuzzleAsync(EndgameTheme theme) {
-        loadPuzzleAsync(() -> repository.randomEndgameMate(theme.lichessTheme()), "endgame-puzzle-loader");
+        loadPuzzleAsync(() -> repository.randomByThemes(theme.theme1(), theme.theme2()), "endgame-puzzle-loader");
     }
 
     private void loadPuzzleAsync(Supplier<Optional<Puzzle>> puzzleSupplier, String threadName) {
