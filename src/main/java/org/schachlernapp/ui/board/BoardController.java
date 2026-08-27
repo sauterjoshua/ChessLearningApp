@@ -26,7 +26,6 @@ public class BoardController {
     private final Board board = new Board();
     private final List<Consumer<ChangeReason>> listeners = new ArrayList<>();
     private Move lastMove;
-    private boolean gameOverDialogSuppressed;
 
     public BoardController() {
         board.loadFromFen(Constants.startStandardFENPosition);
@@ -68,19 +67,6 @@ public class BoardController {
         return board.isKingAttacked();
     }
 
-    public boolean isCheckmate() {
-        return board.isMated();
-    }
-
-    public boolean isStalemate() {
-        return board.isStaleMate();
-    }
-
-    /** Deckt Patt, Zugwiederholung, 50-Züge-Regel und ungenügendes Material ab. */
-    public boolean isDraw() {
-        return board.isDraw();
-    }
-
     public Square kingSquare(Side side) {
         return board.getKingSquare(side);
     }
@@ -88,19 +74,6 @@ public class BoardController {
     /** Der zuletzt tatsächlich ausgeführte Zug (über {@link #tryMove} oder {@link #applyPuzzleMove}), oder {@code null}. */
     public Move lastMove() {
         return lastMove;
-    }
-
-    /**
-     * Unterdrückt den "Partie beendet"-Dialog von {@code BoardView} (z.B. während eines
-     * aktiven Puzzles - ein Puzzle endet oft absichtlich in einem Matt, das dann aber
-     * über das eigene Puzzle-Feedback statt einen Popup-Dialog kommuniziert werden soll).
-     */
-    public void setGameOverDialogSuppressed(boolean suppressed) {
-        this.gameOverDialogSuppressed = suppressed;
-    }
-
-    public boolean isGameOverDialogSuppressed() {
-        return gameOverDialogSuppressed;
     }
 
     /** Zielfelder, auf die die Figur auf {@code from} laut Bibliothek legal ziehen darf. */

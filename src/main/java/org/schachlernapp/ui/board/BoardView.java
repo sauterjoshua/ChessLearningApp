@@ -2,12 +2,9 @@ package org.schachlernapp.ui.board;
 
 import com.github.bhlangonijr.chesslib.File;
 import com.github.bhlangonijr.chesslib.Rank;
-import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
-import javafx.application.Platform;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
@@ -181,7 +178,6 @@ public class BoardView extends Pane {
             entry.getValue().setPiece(controller.pieceAt(entry.getKey()));
         }
         updateCheckHighlight();
-        Platform.runLater(this::maybeShowGameOverDialog);
     }
 
     private void updateCheckHighlight() {
@@ -191,26 +187,6 @@ public class BoardView extends Pane {
         if (controller.isCheck()) {
             squares.get(controller.kingSquare(controller.sideToMove())).setInCheck(true);
         }
-    }
-
-    private void maybeShowGameOverDialog() {
-        if (controller.isGameOverDialogSuppressed()) {
-            return;
-        }
-        String message;
-        if (controller.isCheckmate()) {
-            Side winner = controller.sideToMove() == Side.WHITE ? Side.BLACK : Side.WHITE;
-            message = "Schachmatt! " + (winner == Side.WHITE ? "Weiß" : "Schwarz") + " gewinnt.";
-        } else if (controller.isStalemate()) {
-            message = "Patt - das Spiel endet remis.";
-        } else if (controller.isDraw()) {
-            message = "Remis.";
-        } else {
-            return;
-        }
-        Alert alert = new Alert(Alert.AlertType.INFORMATION, message);
-        alert.setHeaderText("Partie beendet");
-        alert.showAndWait();
     }
 
     SquareView squareViewFor(Square square) {
