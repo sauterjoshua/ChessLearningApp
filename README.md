@@ -18,12 +18,16 @@ Lichess-Datenbank statt eigens verfasster Lektionen.
 - **Puzzle-Trainer**: Puzzles aus einer selbst importierten Lichess-Puzzle-Datenbank lösen,
   eigenes Elo-ähnliches Rating, das sich an die Puzzle-Schwierigkeit anpasst
 - **Endgame-Training**: eigenes Untermenü im Options-Panel mit thematisch gefilterten
-  Matt-Puzzles (Bauern-, Turm-, Läufer-, Springer-, Damenendspiel, Läufer vs. Springer,
-  Bauernendspiel mit Promotion, Allgemein) aus derselben Puzzle-Datenbank
+  Matt-Puzzles (Bauernendspiel + eigene Promotion-Variante, Turm-, Läufer-, Springer-,
+  Damenendspiel, Läufer vs. Springer, Allgemein) aus derselben Puzzle-Datenbank
 - **Partie-Import & -Analyse (chess.com)**: eigene Partien eines chess.com-Users für einen
-  Monat importieren, danach Zug-für-Zug-Analyse mit Stockfish (Fortschrittsbalken, läuft im
-  Hintergrund), Eval-Graph + Zugliste zur Partie, Navigation per Klick oder Pfeiltasten
-  (←/→), Gut/Ungenau/Fehler/Blunder-Auswertung für die eigenen Züge
+  Monat importieren (neueste zuerst), danach Zug-für-Zug-Analyse mit Stockfish (Fortschrittsbalken,
+  läuft im Hintergrund), Eval-Graph + Zugliste zur Partie, Navigation per Klick oder Pfeiltasten
+  (←/→, bei gedrückter Taste beschleunigt, unabhängig vom gerade fokussierten Bedienelement),
+  Gut/Ungenau/Fehler/Blunder-Auswertung für die eigenen Züge
+- **Dark Theme**: durchgängiges dunkles Farbschema (an Claude/Anthropic angelehnt), Brett/
+  Menü/Eval-Leiste/Review-Zeile farblich unterschieden; Schachfiguren im "cburnett"-Design
+  (Colin M. L. Burnett, siehe [Tech-Stack](#tech-stack) für die Lizenz)
 - **Fortschritt** (Puzzle-Rating, Lern-Modus-Statistik) wird automatisch unter
   `~/.schachlernapp/progress.json` gespeichert und beim nächsten Start geladen
 - Robuste Fehlerbehandlung: fehlender Stockfish oder fehlende/korrupte Puzzle-Datenbank
@@ -123,7 +127,9 @@ Beispiel:
 ```
 pom.xml
 mvnw, mvnw.cmd, .mvn/wrapper/         Maven Wrapper
-src/main/resources/style.css          Zentrales Stylesheet (Brett-Farben, Panels, Figuren)
+src/main/resources/style.css          Struktur/Layout/Typografie (keine Farben)
+src/main/resources/dark-theme.css     Farbschema (Dark Theme) - einzige Stelle für alle Farbwerte
+src/main/resources/pieces/*.png       Schachfiguren, "cburnett"-Set (siehe Tech-Stack)
 src/main/java/org/schachlernapp/
     Main.java                        JavaFX-Einstiegspunkt, Verdrahtung, Persistenz-Lifecycle
     Launcher.java                    Separater Start für das Fat-Jar (java -jar)
@@ -154,4 +160,8 @@ src/main/java/org/schachlernapp/
 - [Gson](https://github.com/google/gson) – Fortschritt als JSON, chess.com-API-Antworten parsen
 - [chess.com Public API](https://www.chess.com/news/view/published-data-api) – Partie-Import
   (kein API-Key nötig, nur `java.net.http.HttpClient` aus dem JDK)
+- ["cburnett"-Schachfiguren](https://github.com/lichess-org/lila/tree/master/public/piece/cburnett)
+  von Colin M. L. Burnett – lizenziert unter GPLv2+ / CC-BY-SA 3.0 (Namensnennung erforderlich,
+  bei CC-BY-SA zusätzlich Share-Alike); Original-SVGs via lichess-org/lila, hier als PNG gebündelt
+  (JavaFX kann kein SVG laden), keine zusätzliche Maven-Abhängigkeit
 - maven-shade-plugin – Packaging als ausführbares Fat-Jar
