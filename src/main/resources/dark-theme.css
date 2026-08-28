@@ -57,6 +57,10 @@
     -fx-text-fill: #e0e0e0;
 }
 
+.menu-title {
+    -fx-text-fill: #ececec;
+}
+
 .panel-muted {
     -fx-text-fill: #9a9a9a;
 }

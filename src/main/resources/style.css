@@ -62,6 +62,12 @@
     -fx-font-weight: bold;
 }
 
+/* Titel im Hauptmenü ("Joshi's Chess Tutor") */
+.menu-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
 .panel-muted {
     -fx-font-size: 11px;
     -fx-text-fill: #666666;
