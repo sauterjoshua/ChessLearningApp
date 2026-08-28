@@ -31,8 +31,11 @@ import java.util.function.Supplier;
  * Aufblinken, Auto-Advance) kommuniziert wird.</p>
  *
  * <p>Nach einem gelösten Puzzle wird nach kurzer Verzögerung (Zeit für die
- * grüne Aufblink-Animation in der UI) automatisch {@link #loadNewPuzzleAsync()}
- * aufgerufen - kein manueller Klick mehr nötig. Bei falscher Lösung passiert
+ * grüne Aufblink-Animation in der UI) automatisch das nächste Puzzle geladen -
+ * kein manueller Klick mehr nötig. Wurde das aktuelle Puzzle über
+ * {@link #loadEndgamePuzzleAsync(EndgameTheme)} aus dem Endgame-Untermenü gestartet,
+ * kommt wieder ein Puzzle desselben Endspiel-Themas, sonst ein ratingbasiertes
+ * Puzzle via {@link #loadNewPuzzleAsync()}. Bei falscher Lösung passiert
  * das bewusst NICHT - dort entscheidet der User über {@link #retryCurrentPuzzle()}
  * oder einen manuellen "Neues Puzzle"-Klick.</p>
  */
@@ -53,6 +56,13 @@ public class PuzzleSession {
     private Puzzle currentPuzzle;
     private int nextSolutionIndex;
     private boolean active;
+
+    /**
+     * Gesetzt, solange der User im Endgame-Untermenü ein bestimmtes Thema übt - dann lädt der
+     * Auto-Advance nach einem gelösten Puzzle wieder ein Puzzle desselben Themas statt eines
+     * ratingbasierten Allgemein-Puzzles. {@code null} = normaler Puzzle-Modus.
+     */
+    private EndgameTheme currentEndgameTheme;
 
     public PuzzleSession(BoardController boardController, PuzzleRepository repository,
                           EvaluationController evaluationController) {
@@ -89,6 +99,7 @@ public class PuzzleSession {
 
     /** Sucht adaptiv um das aktuelle User-Rating (±{@code ratingRange}) und lädt es. DB-Zugriff im Hintergrund. */
     public void loadNewPuzzleAsync() {
+        currentEndgameTheme = null;
         PuzzleFilter filter = PuzzleFilter.aroundRating(ratingService.rating(), ratingRange);
         loadPuzzleAsync(() -> repository.random(filter), "puzzle-loader");
     }
@@ -100,6 +111,7 @@ public class PuzzleSession {
      * danach identisch zu {@link #loadNewPuzzleAsync()} (gleiches {@code PuzzlePanel}-Feedback).
      */
     public void loadEndgamePuzzleAsync(EndgameTheme theme) {
+        currentEndgameTheme = theme;
         loadPuzzleAsync(() -> repository.randomByThemes(theme.theme1(), theme.theme2()), "endgame-puzzle-loader");
     }
 
@@ -187,8 +199,15 @@ public class PuzzleSession {
         if (solved) {
             // Kurze Pause, damit die grüne Aufblink-Animation in der UI sichtbar durchlaufen
             // kann, bevor das Brett auf das nächste Puzzle wechselt.
+            EndgameTheme theme = currentEndgameTheme;
             PauseTransition pause = new PauseTransition(AUTO_ADVANCE_DELAY);
-            pause.setOnFinished(e -> loadNewPuzzleAsync());
+            pause.setOnFinished(e -> {
+                if (theme != null) {
+                    loadEndgamePuzzleAsync(theme);
+                } else {
+                    loadNewPuzzleAsync();
+                }
+            });
             pause.play();
         }
     }
