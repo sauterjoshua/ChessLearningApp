@@ -153,6 +153,13 @@
     -fx-border-radius: 6;
 }
 
+/* Kurzes rotes Aufblinken bei falschem Eröffnungszug (OpeningPanel.flashError()) */
+.opening-flash-error {
+    -fx-border-color: #c62828;
+    -fx-border-width: 3;
+    -fx-border-radius: 6;
+}
+
 /* Eval-Graph der Partie-Analyse (M8, ReviewPanel/EvalGraph) */
 .eval-graph {
     -fx-border-color: #d5d5d5;

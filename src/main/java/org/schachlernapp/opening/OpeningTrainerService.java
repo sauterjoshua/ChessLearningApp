@@ -23,10 +23,12 @@ import java.util.function.Consumer;
  *   <li>Solange die Buchlinie läuft, ist {@link EvaluationController#setBlunderFeedbackSuppressed}
  *       aktiv - das normale M3/M5-Feedback würde hier nur stören, die Abweichungs-Rückmeldung
  *       kommt vom Trainer selbst.</li>
- *   <li>Ist die Buchlinie zu Ende ({@link OpeningOutcome#BOOK_FINISHED}) - oder weicht der User
- *       ab ({@link OpeningOutcome#DEVIATION}) -, wird die Sitzung beendet und die Unterdrückung
- *       aufgehoben: ab dann übernehmen die bestehenden M3/M5-Rückmeldungen die Stellung
- *       unverändert. Einen Stockfish-Gegner gibt es bewusst nicht.</li>
+ *   <li>Weicht der User vom Buchzug ab ({@link OpeningOutcome#DEVIATION}), wird sein Zug per
+ *       {@link BoardController#undoLastMove()} zurückgenommen - die Sitzung bleibt aktiv und er
+ *       kann den Zug wiederholen ({@code moveIndex} bleibt stehen).</li>
+ *   <li>Ist die Buchlinie zu Ende ({@link OpeningOutcome#BOOK_FINISHED}), wird die Sitzung beendet
+ *       und die Unterdrückung aufgehoben: ab dann übernehmen die bestehenden M3/M5-Rückmeldungen
+ *       die Stellung unverändert. Einen Stockfish-Gegner gibt es bewusst nicht.</li>
  *   <li>Bei Rolle {@link OpeningRole#PLAY_AGAINST} unterscheidet sich mechanisch nichts von
  *       {@link OpeningRole#PLAY_AS} - der Trainer spielt immer die Züge der Seite, die der User
  *       nicht kontrolliert. Die Rolle wird nur im Zustand gehalten (z.B. für die UI).</li>
@@ -56,6 +58,9 @@ public class OpeningTrainerService {
     private int moveIndex;          // Index des nächsten noch zu spielenden Buch-Halbzugs
     private boolean active;
     private boolean hintEnabled;
+    // true nach einem Fehlzug: der falsche Zug steht noch auf dem Brett, weitere User-Züge werden
+    // ignoriert, bis retryAfterDeviation() ihn zurücknimmt.
+    private boolean awaitingRetry;
 
     public OpeningTrainerService(BoardController boardController, EvaluationController evaluationController) {
         this.boardController = boardController;
@@ -112,6 +117,7 @@ public class OpeningTrainerService {
         this.role = role;
         this.userColor = userColor;
         this.moveIndex = 0;
+        this.awaitingRetry = false;
 
         boardController.loadFen(Constants.startStandardFENPosition); // feuert RESET
 
@@ -139,7 +145,26 @@ public class OpeningTrainerService {
             setSuppressed(false);
         }
         active = false;
+        awaitingRetry = false;
         hintArrowClear.run();
+    }
+
+    public boolean isAwaitingRetry() {
+        return awaitingRetry;
+    }
+
+    /**
+     * "Nochmal versuchen" nach einem Fehlzug: nimmt den falschen Zug vom Brett zurück
+     * ({@link BoardController#undoLastMove()}), danach ist der User wieder mit demselben Buchzug
+     * am Zug. Ohne offene Abweichung ein No-Op.
+     */
+    public void retryAfterDeviation() {
+        if (!active || !awaitingRetry) {
+            return;
+        }
+        awaitingRetry = false;
+        boardController.undoLastMove(); // feuert RESET -> BoardView springt auf die Stellung davor
+        refreshHintArrow();
     }
 
     /**
@@ -148,7 +173,7 @@ public class OpeningTrainerService {
      * er nicht zurückgegeben - der Trainer spielt ihn selbst.)
      */
     public ExpectedMove getExpectedMove() {
-        if (!active || opening == null || moveIndex >= opening.uciMoves().size()) {
+        if (!active || awaitingRetry || opening == null || moveIndex >= opening.uciMoves().size()) {
             return null;
         }
         if (sideToPlay(moveIndex) != userColor) {
@@ -162,6 +187,12 @@ public class OpeningTrainerService {
         if (reason != ChangeReason.MOVE || !active) {
             return;
         }
+        if (awaitingRetry) {
+            // Brett ist auf dem Fehlzug "eingefroren": jeder weitere Zugversuch wird sofort
+            // zurückgenommen, bis "Nochmal versuchen" (retryAfterDeviation) gedrückt wird.
+            boardController.undoLastMove();
+            return;
+        }
         Move move = boardController.lastMove();
         if (move == null) {
             return;
@@ -172,9 +203,12 @@ public class OpeningTrainerService {
         }
 
         if (!move.toString().equals(expected.uci())) {
-            // Abweichung: Buchlinie ist gebrochen. Rückmeldung geben und an M3/M5 übergeben.
+            // Abweichung: den falschen Zug bewusst auf dem Brett STEHEN lassen (klares "war falsch"-
+            // Signal) und weitere Züge sperren, bis der User "Nochmal versuchen" drückt
+            // (-> retryAfterDeviation nimmt den Zug dann zurück). moveIndex bleibt unverändert.
+            awaitingRetry = true;
+            hintArrowClear.run();
             notifyFeedback(OpeningOutcome.DEVIATION, expected.uci());
-            stop();
             return;
         }
 

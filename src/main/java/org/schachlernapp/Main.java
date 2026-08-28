@@ -138,6 +138,7 @@ public class Main extends Application {
         puzzlePanel = new PuzzlePanel();
         openingPanel = new OpeningPanel();
         openingPanel.setOnHintToggle(this::handleHintToggle);
+        openingPanel.setOnRetryRequested(this::handleOpeningRetryRequested);
         openingNextButton = new Button();
         openingNextButton.setVisible(false);
         openingNextButton.setManaged(false);
@@ -300,6 +301,14 @@ public class Main extends Application {
             if (feedback.outcome() == OpeningOutcome.BOOK_FINISHED) {
                 openingPanel.showNextVariation(null); // letzte Variante der Eröffnung
             }
+        }
+    }
+
+    /** M11: "Nochmal versuchen" nach einem Fehlzug - nimmt den falschen Zug im Trainer zurück. */
+    private void handleOpeningRetryRequested() {
+        OpeningTrainerService trainer = openingTrainerService;
+        if (trainer != null) {
+            trainer.retryAfterDeviation();
         }
     }
 

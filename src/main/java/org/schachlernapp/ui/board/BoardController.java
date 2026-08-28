@@ -118,6 +118,22 @@ public class BoardController {
         return applyMove(from, to, ChangeReason.OPENING);
     }
 
+    /**
+     * Nimmt den zuletzt ausgeführten Zug zurück (für "Zug wiederholen" im Eröffnungstrainer nach
+     * einer Abweichung von der Buchlinie). Feuert {@link ChangeReason#RESET}, damit die UI ohne
+     * Animation auf die vorherige Stellung zurückspringt und die Auswertungs-Baseline neu setzt.
+     * Ohne vorherigen Zug ein No-Op ({@code false}).
+     */
+    public boolean undoLastMove() {
+        if (board.getBackup().isEmpty()) {
+            return false;
+        }
+        board.undoMove();
+        lastMove = board.getBackup().isEmpty() ? null : board.getBackup().getLast().getMove();
+        fireChanged(ChangeReason.RESET);
+        return true;
+    }
+
     private boolean applyMove(Square from, Square to, ChangeReason reason) {
         Move chosen = null;
         for (Move move : board.legalMoves()) {

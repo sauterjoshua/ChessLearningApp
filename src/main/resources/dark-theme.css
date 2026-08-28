@@ -129,6 +129,10 @@
     -fx-border-color: #4caf50;
 }
 
+.opening-flash-error {
+    -fx-border-color: #e05252;
+}
+
 .eval-graph {
     -fx-background-color: #1f1f1f;
     -fx-border-color: #3a3a3a;
