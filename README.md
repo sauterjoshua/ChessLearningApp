@@ -3,23 +3,37 @@
 PC-App zum Schach lernen (Puzzle-Trainer als Alternative zu chess.com), gebaut mit
 Java, JavaFX und Stockfish als lokale Analyse-Engine.
 
-Aktueller Stand (siehe [meilensteine.md](meilensteine.md)): **M1–M5 und M7–M9 umgesetzt**.
+Aktueller Stand (siehe [meilensteine.md](meilensteine.md)): **M1–M5 und M7–M11 umgesetzt**.
 M6 (eigene Lektionen zu Eröffnungen/Endspielen als JSON/DB) ist **noch nicht implementiert** –
 das Endgame-Untermenü aus M9 nutzt dafür thematisch gefilterte Puzzles aus der bestehenden
-Lichess-Datenbank statt eigens verfasster Lektionen.
+Lichess-Datenbank, der Eröffnungstrainer aus M11 die ECO-Eröffnungsdaten von
+[lichess-org/chess-openings](https://github.com/lichess-org/chess-openings) statt eigens
+verfasster Lektionen.
 
 ## Features
 
+- **Startmenü-Navigation**: eigenes Hauptmenü beim Start (Neues Spiel / Neues Puzzle / Eröffnung /
+  Endgame / Partie importieren / Programm beenden); die Spielansicht hat unten rechts einen
+  "Zurück"-Button ins Hauptmenü
 - **Schachbrett** mit Drag&Drop, Zugvalidierung über [chesslib](https://github.com/bhlangonijr/chesslib),
-  Rand-Beschriftung (a–h/1–8), automatischer Umdrehung bei Puzzles (lösende Seite unten)
+  Rand-Beschriftung (a–h/1–8), automatischer Umdrehung bei Puzzles/Eröffnungen (eigene Seite unten)
 - **Eval-Balken**: Live-Stellungsbewertung durch einen lokalen Stockfish-Subprozess
 - **Lern-Modus**: freies Spiel mit Zug-für-Zug-Feedback (gut/ungenau/Fehler/Blunder) und
   Engine-Zugvorschlag in SAN
 - **Puzzle-Trainer**: Puzzles aus einer selbst importierten Lichess-Puzzle-Datenbank lösen,
   eigenes Elo-ähnliches Rating, das sich an die Puzzle-Schwierigkeit anpasst
-- **Endgame-Training**: eigenes Untermenü im Options-Panel mit thematisch gefilterten
+- **Endgame-Training**: eigene Auswahl-Ansicht mit thematisch gefilterten
   Matt-Puzzles (Bauernendspiel + eigene Promotion-Variante, Turm-, Läufer-, Springer-,
-  Damenendspiel, Läufer vs. Springer, Allgemein) aus derselben Puzzle-Datenbank
+  Damenendspiel, Läufer vs. Springer, Allgemein) aus derselben Puzzle-Datenbank; nach dem
+  ersten Puzzle bleibt der Auto-Advance im gewählten Thema
+- **Eröffnungstrainer**: eine ECO-Eröffnung (Familie → Variante, ~150 Familien) auswählen, als
+  Rolle "spielen als" oder "dagegen" plus Farbe; der Trainer spielt die Buchzüge der Gegenseite
+  automatisch und prüft jeden eigenen Zug gegen die Buchlinie. Nach Buchende oder einer Abweichung
+  übernehmen die normalen Eval-/Blunder-Rückmeldungen. Optionaler **Hinweis-Pfeil** auf dem Brett
+  (Schalter direkt beim Trainer-Panel, Zustand wird mitgespeichert) zeigt den nächsten Buchzug.
+  Nach durchgespielter Variante führt ein "Weiter"-Button direkt zur nächsten Variante derselben
+  Eröffnung. Die ECO-Daten (Quelle: lichess-org/chess-openings) sind mitgeliefert und werden beim
+  ersten Start automatisch in die Datenbank importiert – kein manueller Schritt nötig
 - **Partie-Import & -Analyse (chess.com)**: eigene Partien eines chess.com-Users für einen
   Monat importieren (neueste zuerst), danach Zug-für-Zug-Analyse mit Stockfish (Fortschrittsbalken,
   läuft im Hintergrund), Eval-Graph + Zugliste zur Partie, Navigation per Klick oder Pfeiltasten
@@ -28,9 +42,9 @@ Lichess-Datenbank statt eigens verfasster Lektionen.
 - **Dark Theme**: durchgängiges dunkles Farbschema (an Claude/Anthropic angelehnt), Brett/
   Menü/Eval-Leiste/Review-Zeile farblich unterschieden; Schachfiguren im "cburnett"-Design
   (Colin M. L. Burnett, siehe [Tech-Stack](#tech-stack) für die Lizenz)
-- **Fortschritt** (Puzzle-Rating, Lern-Modus-Statistik) wird automatisch unter
-  `~/.schachlernapp/progress.json` gespeichert und beim nächsten Start geladen
-- Robuste Fehlerbehandlung: fehlender Stockfish oder fehlende/korrupte Puzzle-Datenbank
+- **Fortschritt** (Puzzle-Rating, Lern-Modus-Statistik, Hinweis-Pfeil-Schalter) wird automatisch
+  unter `~/.schachlernapp/progress.json` gespeichert und beim nächsten Start geladen
+- Robuste Fehlerbehandlung: fehlender Stockfish oder fehlende/korrupte Puzzle-/Eröffnungs-Datenbank
   führen zu einer Fehlermeldung im UI statt zum Absturz – die restlichen Funktionen
   bleiben nutzbar
 
@@ -41,8 +55,9 @@ Lichess-Datenbank statt eigens verfasster Lektionen.
 - Maven ist **nicht** separat nötig: das Projekt bringt einen Maven Wrapper (`./mvnw`) mit,
   der bei Bedarf automatisch die passende Maven-Version herunterlädt
 - Internetzugang **nur** für den Partie-Import (öffentliche chess.com-API, kein API-Key
-  nötig) — alle anderen Features (Brett, Puzzle-Trainer, Lern-Modus, Endgame-Training)
-  funktionieren komplett offline
+  nötig) — alle anderen Features (Brett, Puzzle-Trainer, Lern-Modus, Endgame-Training,
+  Eröffnungstrainer) funktionieren komplett offline; die ECO-Eröffnungsdaten liegen als
+  `data/openings/*.tsv` im Repo
 
 ## Setup
 
@@ -58,9 +73,9 @@ Alternativ die Binary direkt von [stockfishchess.org/download](https://stockfish
 herunterladen und ausführbar machen (`chmod +x stockfish`).
 
 Die App sucht die Binary standardmäßig unter dem Namen `stockfish` im `PATH`. Ist Stockfish
-nicht auffindbar, öffnet sich das Fenster trotzdem — Eval-Balken, Blunder-Erkennung, Lern-Modus
-und Puzzle-Feature melden dann einen klaren Fehlerdialog statt abzustürzen; das Brett bleibt
-uneingeschränkt nutzbar. Pfad überschreibbar via `-Dstockfish.path=...` (siehe
+nicht auffindbar, öffnet sich das Fenster trotzdem — Eval-Balken, Blunder-Erkennung, Lern-Modus,
+Puzzle-Feature und Eröffnungstrainer melden dann einen klaren Fehlerdialog statt abzustürzen;
+das Brett bleibt uneingeschränkt nutzbar. Pfad überschreibbar via `-Dstockfish.path=...` (siehe
 [Konfiguration](#konfiguration)).
 
 ### 2. Projekt bauen
@@ -88,6 +103,12 @@ java -cp "target/classes:$(cat cp.txt)" \
 Datei muss nicht komplett verarbeitet werden). Ohne importierte `puzzles.db` startet die App
 trotzdem — das Puzzle-Panel zeigt dann "Kein passendes Puzzle gefunden".
 
+### 4. Eröffnungsdaten
+
+Kein Schritt nötig: die ~3.800 ECO-Linien liegen als `data/openings/*.tsv` im Repo und werden
+beim ersten Start automatisch in die Tabelle `openings` (in `puzzles.db`) importiert
+(PGN→UCI-Konvertierung, einmalig ~0,5 s). Bei den Folgestarts wird der Import übersprungen.
+
 ## Build & Run
 
 **Entwicklung** (startet über den javafx-maven-plugin direkt aus dem Quellcode):
@@ -108,12 +129,14 @@ Das Jar wird für die Build-Plattform gebaut (native JavaFX-Bibliotheken sind pl
 
 ## Konfiguration
 
-Alle drei folgen demselben Muster: System-Property > Umgebungsvariable > Default.
+Alle Pfade folgen demselben Muster: System-Property > Umgebungsvariable > Default.
 
 | Zweck | System-Property | Umgebungsvariable | Default |
 |---|---|---|---|
 | Stockfish-Binary | `-Dstockfish.path=...` | `STOCKFISH_PATH` | `stockfish` (muss im `PATH` liegen) |
 | Puzzle-Datenbank | `-Dpuzzles.db.path=...` | `PUZZLES_DB_PATH` | `puzzles.db` (Arbeitsverzeichnis) |
+| Eröffnungs-Datenbank | `-Dopenings.db.path=...` | `OPENINGS_DB_PATH` | `puzzles.db` (dieselbe Datei, Tabelle `openings`) |
+| ECO-Seed-Verzeichnis | `-Dopenings.tsv.dir=...` | `OPENINGS_TSV_DIR` | `data/openings` (Arbeitsverzeichnis) |
 | Fortschrittsdatei | `-Dprogress.path=...` | `PROGRESS_PATH` | `~/.schachlernapp/progress.json` |
 
 Beispiel:
@@ -127,25 +150,33 @@ Beispiel:
 ```
 pom.xml
 mvnw, mvnw.cmd, .mvn/wrapper/         Maven Wrapper
+data/openings/*.tsv                   ECO-Eröffnungs-Seed-Daten (lichess-org/chess-openings)
 src/main/resources/style.css          Struktur/Layout/Typografie (keine Farben)
 src/main/resources/dark-theme.css     Farbschema (Dark Theme) - einzige Stelle für alle Farbwerte
 src/main/resources/pieces/*.png       Schachfiguren, "cburnett"-Set (siehe Tech-Stack)
 src/main/java/org/schachlernapp/
-    Main.java                        JavaFX-Einstiegspunkt, Verdrahtung, Persistenz-Lifecycle
+    Main.java                        JavaFX-Einstiegspunkt, Verdrahtung, Persistenz-Lifecycle,
+                                     Startmenü-Navigation (switchTo(AppView))
     Launcher.java                    Separater Start für das Fat-Jar (java -jar)
     chess/ChessLibCheck.java         chesslib-Funktionstest (FEN laden/ausgeben)
     engine/                          Stockfish-Subprozess, UCI-Kommunikation, Live-Auswertung
     analysis/                        Vorher/Nachher-Eval-Vergleich, Blunder-/Lern-Modus-Feedback
     puzzle/                          CSV-Import, SQLite-DAO (inkl. Endgame-Theme-Filter),
                                      Puzzle-Session, Rating-System
+    opening/                         ECO-Seed-Import (PGN→UCI), SQLite-DAO (Tabelle openings),
+                                     Eröffnungstrainer-Service (Buchzug-Vergleich, Hint-Pfeil)
     review/                          chess.com-Import (HTTP + PGN-Parsing via chesslib),
                                      Partie-Analyse-Engine (Stockfish, Fortschritts-Callback)
     progress/                        Laden/Speichern des Fortschritts als JSON
-    ui/board/                        Brett-Widget, Drag&Drop, Figuren-Rendering
-    ui/eval/, ui/learn/, ui/puzzle/  Eval-Balken, Lern-Modus- und Puzzle-Feedback-Panels
+    ui/board/                        Brett-Widget, Drag&Drop, Figuren-Rendering, Hinweis-Pfeil-Overlay
+    ui/eval/, ui/learn/, ui/puzzle/, ui/opening/
+                                     Eval-Balken, Lern-Modus-, Puzzle- und Eröffnungs-Panels
     ui/review/                       Import-Dialog, Eval-Graph, Zugliste, Review-Zeile
-    ui/OptionsPanel.java             Aktions-Buttons (Neues Spiel/Puzzle/Endgame-Untermenü/
-                                     Partie importieren)
+    ui/AppView.java                  Enum der Top-Level-Ansichten (Hauptmenü / Auswahl / Spiel)
+    ui/MainMenuView.java             Startmenü (Aktions-Buttons + Programm beenden)
+    ui/EndgameMenuView.java          Endgame-Themen-Auswahl
+    ui/OpeningMenuView.java          Eröffnungs-Auswahl (Familie → Variante, Rolle, Farbe)
+    ui/OptionsPanel.java             seit M10 abgelöst durch MainMenuView, ungenutzt
     ui/UiAlerts.java                 Wiederverwendbare Fehlerdialoge
 ```
 
@@ -160,6 +191,8 @@ src/main/java/org/schachlernapp/
 - [Gson](https://github.com/google/gson) – Fortschritt als JSON, chess.com-API-Antworten parsen
 - [chess.com Public API](https://www.chess.com/news/view/published-data-api) – Partie-Import
   (kein API-Key nötig, nur `java.net.http.HttpClient` aus dem JDK)
+- [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings) – ECO-Eröffnungs-TSVs
+  (`a.tsv`–`e.tsv`), als Seed-Daten unter `data/openings/` gebündelt; lizenziert unter CC0
 - ["cburnett"-Schachfiguren](https://github.com/lichess-org/lila/tree/master/public/piece/cburnett)
   von Colin M. L. Burnett – lizenziert unter GPLv2+ / CC-BY-SA 3.0 (Namensnennung erforderlich,
   bei CC-BY-SA zusätzlich Share-Alike); Original-SVGs via lichess-org/lila, hier als PNG gebündelt

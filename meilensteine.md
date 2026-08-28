@@ -43,6 +43,23 @@
 ## M9: Endgame-Untermenü
 - Eigenes Untermenü im Options-Panel (Haupt-/Untermenü-Umschaltung, erweiterbar für z.B. Eröffnung)
 - Thematisch gefilterte Matt-/Promotion-Puzzles aus der bestehenden Lichess-Datenbank
+- Nach dem ersten Thema-Puzzle bleibt der Auto-Advance im selben Thema (statt allg. Puzzle)
+
+## M10: Startmenü-Navigation
+- Eigenständiges Startmenü statt dauerhaftem Options-Panel neben dem Brett
+- `Main.switchTo(AppView)` schaltet zwischen Hauptmenü, Endgame-/Eröffnungs-Auswahl und Spielansicht
+- "Programm beenden"-Button im Hauptmenü
+- (`OptionsPanel` damit abgelöst, bleibt nur noch als toter Code im Repo)
+
+## M11: Eröffnungstrainer
+- ECO-Eröffnungen (Quelle: lichess-org/chess-openings, `data/openings/*.tsv`) beim ersten Start
+  in die Tabelle `openings` importiert (PGN→UCI via chesslib), in derselben `puzzles.db`
+- Auswahl: Eröffnung (Familie) → Variante; Rolle (spielen als / dagegen) + Farbe
+- Trainer spielt die Buchzüge der Gegenseite automatisch, vergleicht jeden User-Zug mit der
+  Buchlinie; nach Buchende/Abweichung übernehmen die M3/M5-Rückmeldungen
+- Generischer Hinweis-Pfeil auf dem Brett (`BoardView.showHintArrow`), Schalter im Trainer-Panel,
+  Zustand in `progress.json`
+- "Weiter"-Button: nach durchgespielter Variante direkt zur nächsten Variante derselben Eröffnung
 
 ## Offen
 - Bibliothekswahl (chesslib vs. Alternativen)
