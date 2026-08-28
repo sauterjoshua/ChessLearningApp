@@ -10,12 +10,15 @@ import org.schachlernapp.engine.EngineEvaluator;
 import org.schachlernapp.engine.StockfishEngine;
 import org.schachlernapp.progress.ProgressData;
 import org.schachlernapp.progress.ProgressStore;
+import org.schachlernapp.puzzle.EndgameTheme;
 import org.schachlernapp.review.GameImportService;
 import org.schachlernapp.review.GameReview;
 import org.schachlernapp.review.GameReviewEngine;
 import org.schachlernapp.review.HalfMoveReview;
 import org.schachlernapp.review.ImportedGame;
-import org.schachlernapp.ui.OptionsPanel;
+import org.schachlernapp.ui.AppView;
+import org.schachlernapp.ui.EndgameMenuView;
+import org.schachlernapp.ui.MainMenuView;
 import org.schachlernapp.ui.UiAlerts;
 import org.schachlernapp.ui.board.BoardController;
 import org.schachlernapp.ui.board.BoardView;
@@ -32,12 +35,16 @@ import org.schachlernapp.puzzle.PuzzleSession;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -57,6 +64,20 @@ import java.util.Map;
  * als Fallback für Fälle, in denen {@code stop()} nicht zuverlässig läuft
  * (z.B. {@code kill}, Terminal geschlossen, Prozessmanager statt normalem
  * Fenster-Schließen).
+ *
+ * <p><b>Startmenü-Navigation (M10):</b> {@link #switchTo(AppView)} tauscht den Inhalt des
+ * Wurzel-{@code StackPane} zwischen {@link MainMenuView}, {@link EndgameMenuView} und der
+ * Spielansicht ({@link #buildGameView()}) aus. Brett/Engine-Anbindung (Board-/Eval-/Lern-
+ * Modus-/Puzzle-/Review-Komponenten) werden bewusst nur EINMAL in {@link #start} erzeugt und
+ * als Felder gehalten statt bei jedem Wechsel zu {@link AppView#GAME} neu - sie sind über
+ * {@link #runStartupChecks} fest an eine bestimmte {@link BoardController}-Instanz verdrahtet;
+ * {@link #buildGameView()} baut bei jedem Aufruf nur das Layout (die Container-Nodes) neu aus
+ * diesen bestehenden Instanzen zusammen. Aus demselben Grund lesen die Menü-Aktionen
+ * ({@link #handleNewGameRequested()} etc.) die zugehörigen, ggf. erst asynchron nach dem
+ * Stockfish-Start gesetzten Felder ({@link #learnModeController}/{@link #puzzleSession}) bei
+ * jedem Klick frisch aus - eine feste Bindung wie zuvor bei {@code OptionsPanel} wäre hier
+ * hinfällig, da {@link MainMenuView}/{@link EndgameMenuView} bei jedem Menü-Besuch neu erzeugt
+ * werden.</p>
  */
 public class Main extends Application {
 
@@ -68,6 +89,15 @@ public class Main extends Application {
     private volatile LearnModeController learnModeController;
     private volatile ProgressData progress;
 
+    private StackPane root;
+    private BoardController boardController;
+    private BoardView boardView;
+    private EvalBar evalBar;
+    private LearnModePanel learnModePanel;
+    private PuzzlePanel puzzlePanel;
+    private ReviewPanel reviewPanel;
+    private GameImportService gameImportService;
+
     @Override
     public void start(Stage primaryStage) {
         // Fallback für nicht-JavaFX-konformes Beenden (kill, Terminal zu, Prozessmanager) -
@@ -78,45 +108,25 @@ public class Main extends Application {
 
         primaryStage.setTitle("Schach-Lernapp");
 
-        BoardController boardController = new BoardController();
-        BoardView boardView = new BoardView(boardController);
+        boardController = new BoardController();
+        boardView = new BoardView(boardController);
         boardView.getStyleClass().add("board-pane");
-        EvalBar evalBar = new EvalBar();
+        evalBar = new EvalBar();
         evalBar.getStyleClass().add("eval-pane");
-        LearnModePanel learnModePanel = new LearnModePanel();
-        PuzzlePanel puzzlePanel = new PuzzlePanel();
-        OptionsPanel optionsPanel = new OptionsPanel();
-        ReviewPanel reviewPanel = new ReviewPanel();
-        GameImportService gameImportService = new GameImportService();
-
-        // Feedback/Ratings (LearnModePanel + PuzzlePanel) in einer Leiste ÜBER dem Brett,
-        // Optionen (OptionsPanel) als eigene Spalte RECHTS neben dem Brett.
-        HBox.setHgrow(learnModePanel, Priority.ALWAYS);
-        HBox.setHgrow(puzzlePanel, Priority.ALWAYS);
-        learnModePanel.setMaxWidth(Double.MAX_VALUE);
-        puzzlePanel.setMaxWidth(Double.MAX_VALUE);
-        HBox feedbackRow = new HBox(8, learnModePanel, puzzlePanel);
-
-        // M9-Redesign: Zugliste bekommt eine eigene, feste Spalte AUSSERHALB von Brett/Menü (statt
-        // zwischen beiden gequetscht zu werden) - Board/Menü behalten dadurch ihre bisherigen
-        // Breiten. ReviewPanel bleibt Eigentümer der Zugliste (siehe ReviewPanel.moveListNode()).
-        HBox boardRow = new HBox(evalBar, boardView, optionsPanel, reviewPanel.moveListNode());
-        boardRow.setAlignment(Pos.CENTER);
-        HBox.setHgrow(boardView, Priority.ALWAYS);
+        learnModePanel = new LearnModePanel();
+        puzzlePanel = new PuzzlePanel();
+        reviewPanel = new ReviewPanel();
+        gameImportService = new GameImportService();
 
         // M8: Import-Dialog braucht keine Stockfish-Verbindung, daher schon hier verdrahtet (nicht erst
         // in runStartupChecks, das nur für Stockfish-/Puzzle-DB-abhängige Features gilt). Die Analyse
         // selbst (startGameReview) prüft engineEvaluator zur Auswahl-Zeit selbst und meldet sich mit
         // einem Fehlerdialog, falls Stockfish (noch) nicht verfügbar ist.
-        optionsPanel.setOnImportGameRequested(() -> {
-            ImportGameDialog dialog = new ImportGameDialog(gameImportService);
-            dialog.showAndWait().ifPresent(reviewPanel::setGames);
-        });
         reviewPanel.setOnGameSelected(game -> startGameReview(reviewPanel, learnModePanel, game));
         reviewPanel.setOnPositionSelected(fen -> boardController.loadFen(fen, ChangeReason.REVIEW));
 
-        VBox root = new VBox(8, feedbackRow, boardRow, reviewPanel);
-        VBox.setVgrow(boardRow, Priority.ALWAYS);
+        root = new StackPane();
+        switchTo(AppView.MAIN_MENU);
 
         // Breite um die neue Zugliste-Spalte (M9-Redesign, ~160px + Spacing) erweitert, damit das
         // Brett nicht kleiner startet als vor der Umstrukturierung.
@@ -133,14 +143,103 @@ public class Main extends Application {
 
         // Läuft im Hintergrund, damit ein fehlender/langsamer Stockfish das UI nicht blockiert.
         Thread diagnostics = new Thread(
-                () -> runStartupChecks(boardController, boardView, evalBar, learnModePanel, puzzlePanel, optionsPanel),
+                () -> runStartupChecks(boardController, boardView, evalBar, learnModePanel, puzzlePanel),
                 "startup-diagnostics");
         diagnostics.setDaemon(true);
         diagnostics.start();
     }
 
+    /**
+     * Tauscht den Inhalt von {@link #root} auf die gewünschte {@link AppView}. {@link MainMenuView}/
+     * {@link EndgameMenuView} werden dabei bewusst jedes Mal neu erzeugt (kein UI-Zustand zu erhalten),
+     * {@link #buildGameView()} baut sein Layout dagegen aus den dauerhaft gehaltenen Feldern (siehe
+     * Klassen-Javadoc).
+     */
+    private void switchTo(AppView view) {
+        Node content = switch (view) {
+            case MAIN_MENU -> new MainMenuView(
+                    this::handleNewGameRequested,
+                    this::handleNewPuzzleRequested,
+                    () -> switchTo(AppView.ENDGAME_SELECT),
+                    this::handleImportGameRequested);
+            case ENDGAME_SELECT -> new EndgameMenuView(
+                    this::handleEndgameThemeSelected,
+                    () -> switchTo(AppView.MAIN_MENU));
+            case GAME -> buildGameView();
+        };
+        root.getChildren().setAll(content);
+    }
+
+    /** Wie bisher {@code OptionsPanel.setOnNewGameRequested(learnModeController::resetSession)}. */
+    private void handleNewGameRequested() {
+        LearnModeController controller = learnModeController;
+        if (controller != null) {
+            controller.resetSession();
+        }
+        switchTo(AppView.GAME);
+    }
+
+    /** Wie bisher {@code OptionsPanel.setOnNewPuzzleRequested(puzzleSession::loadNewPuzzleAsync)}. */
+    private void handleNewPuzzleRequested() {
+        PuzzleSession session = puzzleSession;
+        if (session != null) {
+            session.loadNewPuzzleAsync();
+        }
+        switchTo(AppView.GAME);
+    }
+
+    /** Wie bisher {@code OptionsPanel.setOnEndgameThemeSelected(puzzleSession::loadEndgamePuzzleAsync)}. */
+    private void handleEndgameThemeSelected(EndgameTheme theme) {
+        PuzzleSession session = puzzleSession;
+        if (session != null) {
+            session.loadEndgamePuzzleAsync(theme);
+        }
+        switchTo(AppView.GAME);
+    }
+
+    /** Wie bisher der Import-Handler in {@code OptionsPanel}; öffnet zusätzlich die Spielansicht. */
+    private void handleImportGameRequested() {
+        ImportGameDialog dialog = new ImportGameDialog(gameImportService);
+        dialog.showAndWait().ifPresent(games -> {
+            reviewPanel.setGames(games);
+            switchTo(AppView.GAME);
+        });
+    }
+
+    /**
+     * Baut die Spielansicht (Feedback-Zeile + Brett-Zeile + Review-Leiste, wie vor M10 der gesamte
+     * Fensterinhalt) aus den in {@link #start} einmalig erzeugten Feldern neu zusammen, plus einem
+     * "Zurück"-Button unten rechts als Overlay zurück ins Hauptmenü.
+     */
+    private StackPane buildGameView() {
+        // Feedback/Ratings (LearnModePanel + PuzzlePanel) in einer Leiste ÜBER dem Brett.
+        HBox.setHgrow(learnModePanel, Priority.ALWAYS);
+        HBox.setHgrow(puzzlePanel, Priority.ALWAYS);
+        learnModePanel.setMaxWidth(Double.MAX_VALUE);
+        puzzlePanel.setMaxWidth(Double.MAX_VALUE);
+        HBox feedbackRow = new HBox(8, learnModePanel, puzzlePanel);
+
+        // M9-Redesign: Zugliste bekommt eine eigene, feste Spalte AUSSERHALB von Brett/Menü (statt
+        // zwischen beiden gequetscht zu werden). ReviewPanel bleibt Eigentümer der Zugliste (siehe
+        // ReviewPanel.moveListNode()).
+        HBox boardRow = new HBox(evalBar, boardView, reviewPanel.moveListNode());
+        boardRow.setAlignment(Pos.CENTER);
+        HBox.setHgrow(boardView, Priority.ALWAYS);
+
+        VBox gameBox = new VBox(8, feedbackRow, boardRow, reviewPanel);
+        VBox.setVgrow(boardRow, Priority.ALWAYS);
+
+        Button backButton = new Button("Zurück");
+        backButton.setOnAction(e -> switchTo(AppView.MAIN_MENU));
+
+        StackPane gameView = new StackPane(gameBox, backButton);
+        StackPane.setAlignment(backButton, Pos.BOTTOM_RIGHT);
+        StackPane.setMargin(backButton, new Insets(8));
+        return gameView;
+    }
+
     private void runStartupChecks(BoardController boardController, BoardView boardView, EvalBar evalBar,
-                                   LearnModePanel learnModePanel, PuzzlePanel puzzlePanel, OptionsPanel optionsPanel) {
+                                   LearnModePanel learnModePanel, PuzzlePanel puzzlePanel) {
         System.out.println("=== Schach-Lernapp: Startdiagnose ===");
         ProgressData progress = progressStore.load();
         this.progress = progress;
@@ -186,7 +285,6 @@ public class Main extends Application {
                     learnModeController.countOf(MoveQuality.BLUNDER));
             saveProgress(); // nach jedem Lern-Modus-Zug, nicht erst bei stop() - siehe M7-Auftrag
         });
-        optionsPanel.setOnNewGameRequested(learnModeController::resetSession);
 
         String puzzleDbPath = PuzzleRepository.resolveDefaultPath();
         try {
@@ -205,8 +303,6 @@ public class Main extends Application {
                 }
             });
             puzzlePanel.setOnRetryRequested(puzzleSession::retryCurrentPuzzle);
-            optionsPanel.setOnNewPuzzleRequested(puzzleSession::loadNewPuzzleAsync);
-            optionsPanel.setOnEndgameThemeSelected(puzzleSession::loadEndgamePuzzleAsync);
             puzzleSession.addPuzzleStartedListener(solverSide -> boardView.setFlipped(solverSide == Side.BLACK));
             System.out.println("[puzzle] DB geöffnet: " + puzzleDbPath
                     + " (importieren via PuzzleCsvImporter, falls noch leer)");
