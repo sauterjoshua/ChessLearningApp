@@ -57,8 +57,51 @@
     -fx-text-fill: #e0e0e0;
 }
 
+/* --- Hauptmenü-Karte (Dark) --- */
+
+.menu-card {
+    -fx-background-color: #262626;
+    -fx-border-color: #3a3a3a;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 32, 0, 0, 12);
+}
+
 .menu-title {
+    -fx-text-fill: #f2f2f2;
+}
+
+.menu-subtitle {
+    -fx-text-fill: #9a9a9a;
+}
+
+.menu-heading {
+    -fx-text-fill: #f2f2f2;
+}
+
+.menu-button {
+    -fx-background-color: #333333;
     -fx-text-fill: #ececec;
+}
+
+.menu-button:hover {
+    -fx-background-color: #3f3f3f;
+}
+
+.menu-button:pressed {
+    -fx-background-color: #2b2b2b;
+}
+
+.menu-button-quit {
+    -fx-background-color: transparent;
+    -fx-text-fill: #9a9a9a;
+}
+
+.menu-button-quit:hover {
+    -fx-background-color: #3a2b28;
+    -fx-text-fill: #e0817a;
+}
+
+.menu-button-quit:pressed {
+    -fx-background-color: #332420;
 }
 
 .panel-muted {

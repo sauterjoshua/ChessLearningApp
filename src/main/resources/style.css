@@ -62,10 +62,71 @@
     -fx-font-weight: bold;
 }
 
-/* Titel im Hauptmenü ("Joshi's Chess Tutor") */
+/* --- Hauptmenü ("Joshi's Chess Tutor") - zentrierte Karte --- */
+
+.menu-card {
+    -fx-background-color: white;
+    -fx-background-radius: 16;
+    -fx-border-color: #e0e0e0;
+    -fx-border-radius: 16;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.18), 28, 0, 0, 10);
+}
+
 .menu-title {
-    -fx-font-size: 20px;
+    -fx-font-size: 27px;
     -fx-font-weight: bold;
+}
+
+.menu-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: #7a7a7a;
+}
+
+/* Abschnitts-Überschrift der Auswahl-Karten (Endgame/Eröffnung) */
+.menu-heading {
+    -fx-font-size: 19px;
+    -fx-font-weight: bold;
+}
+
+.menu-card .combo-box {
+    -fx-min-height: 40px;
+}
+
+.menu-button {
+    -fx-font-size: 14px;
+    -fx-min-height: 46px;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-padding: 8 18 8 18;
+    -fx-cursor: hand;
+    -fx-background-color: #f2f2f2;
+    -fx-text-fill: #1f1f1f;
+    -fx-border-color: transparent;
+}
+
+.menu-button:hover {
+    -fx-background-color: #e7e7e7;
+}
+
+.menu-button:pressed {
+    -fx-background-color: #dcdcdc;
+}
+
+.menu-button-quit {
+    -fx-background-color: transparent;
+    -fx-text-fill: #8a8a8a;
+    -fx-min-height: 40px;
+    -fx-font-size: 13px;
+}
+
+.menu-button-quit:hover {
+    -fx-background-color: #f6e4e2;
+    -fx-text-fill: #b5473d;
+}
+
+.menu-button-quit:pressed {
+    -fx-background-color: #f0d4d0;
 }
 
 .panel-muted {

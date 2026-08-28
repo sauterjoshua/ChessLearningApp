@@ -8,6 +8,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
 import org.schachlernapp.opening.Opening;
@@ -24,6 +25,8 @@ import java.util.List;
  * <p>Zweistufige Auswahl aus {@link OpeningRepository}: Eröffnung (Familienname, ~150 Einträge
  * alphabetisch) -&gt; Variante. Der ECO-Code (z.B. {@code B90}) wird bei der Variante nur als
  * Info angezeigt, er ist kein Auswahlkriterium. Dazu Rolle ({@link OpeningRole}) und Farbe.</p>
+ *
+ * <p>Optik (M11): gleicher zentrierter Karten-Look wie {@link MainMenuView}.</p>
  */
 public class OpeningMenuView extends VBox {
 
@@ -46,11 +49,17 @@ public class OpeningMenuView extends VBox {
     public OpeningMenuView(OpeningRepository repository, OnStart onStart, Runnable onBack) {
         this.repository = repository;
 
-        setSpacing(8);
-        setPadding(new Insets(8));
-        setAlignment(Pos.CENTER);
-        setPrefWidth(260);
-        getStyleClass().addAll("side-panel", "menu-pane");
+        setSpacing(10);
+        setPadding(new Insets(40));
+        setAlignment(Pos.TOP_CENTER);
+        setFillWidth(true);
+        setPrefWidth(420);
+        setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+        getStyleClass().add("menu-card");
+
+        Label title = new Label("Eröffnung wählen");
+        title.getStyleClass().add("menu-heading");
+        VBox.setMargin(title, new Insets(0, 0, 8, 0));
 
         familyBox.setMaxWidth(Double.MAX_VALUE);
         variationBox.setMaxWidth(Double.MAX_VALUE);
@@ -91,8 +100,10 @@ public class OpeningMenuView extends VBox {
         black.setUserData(Side.BLACK);
         black.setToggleGroup(colorGroup);
 
+        startButton.getStyleClass().add("menu-button");
         startButton.setMaxWidth(Double.MAX_VALUE);
         startButton.setDisable(true);
+        VBox.setMargin(startButton, new Insets(8, 0, 0, 0));
         startButton.setOnAction(e -> {
             Opening opening = variationBox.getValue();
             if (opening != null) {
@@ -103,6 +114,7 @@ public class OpeningMenuView extends VBox {
         });
 
         Button backButton = new Button("Zurück");
+        backButton.getStyleClass().add("menu-button");
         backButton.setMaxWidth(Double.MAX_VALUE);
         backButton.setOnAction(e -> onBack.run());
 
@@ -110,15 +122,22 @@ public class OpeningMenuView extends VBox {
         ecoHint.setWrapText(true);
         ecoHint.getStyleClass().add("panel-muted");
 
-        getChildren().addAll(new Label("Eröffnung wählen"), familyBox, variationBox, ecoHint);
+        getChildren().addAll(title, familyBox, variationBox, ecoHint);
         if (families.isEmpty()) {
             Label empty = new Label("Keine Eröffnungsdaten gefunden (data/openings/*.tsv).");
             empty.setWrapText(true);
             empty.getStyleClass().add("panel-muted");
             getChildren().add(empty);
         }
-        getChildren().addAll(new Label("Rolle"), playAs, playAgainst,
-                new Label("Farbe"), white, black, startButton, backButton);
+        getChildren().addAll(subLabel("Rolle"), playAs, playAgainst,
+                subLabel("Farbe"), white, black, startButton, backButton);
+    }
+
+    private static Label subLabel(String text) {
+        Label label = new Label(text);
+        label.getStyleClass().add("panel-muted");
+        VBox.setMargin(label, new Insets(6, 0, 0, 0));
+        return label;
     }
 
     private void onFamilySelected(String family) {
