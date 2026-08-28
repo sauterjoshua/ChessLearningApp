@@ -54,6 +54,15 @@ public class PuzzleSession {
     private int nextSolutionIndex;
     private boolean active;
 
+    /**
+     * Gewähltes Endspiel-Thema des M9-Untermenüs, oder {@code null} für den regulären
+     * Rating-adaptiven Modus. Merkt sich den Modus über einzelne Puzzles hinweg, damit
+     * das Auto-Advance nach einem gelösten Endspiel-Puzzle wieder ein Puzzle *desselben*
+     * Themas nachlädt statt in {@link #loadNewPuzzleAsync()} (Rating, "Allgemein")
+     * zurückzufallen.
+     */
+    private EndgameTheme currentEndgameTheme;
+
     public PuzzleSession(BoardController boardController, PuzzleRepository repository,
                           EvaluationController evaluationController) {
         this(boardController, repository, evaluationController, new PuzzleRatingService(), DEFAULT_RATING_RANGE);
@@ -89,6 +98,7 @@ public class PuzzleSession {
 
     /** Sucht adaptiv um das aktuelle User-Rating (±{@code ratingRange}) und lädt es. DB-Zugriff im Hintergrund. */
     public void loadNewPuzzleAsync() {
+        currentEndgameTheme = null;
         PuzzleFilter filter = PuzzleFilter.aroundRating(ratingService.rating(), ratingRange);
         loadPuzzleAsync(() -> repository.random(filter), "puzzle-loader");
     }
@@ -100,7 +110,21 @@ public class PuzzleSession {
      * danach identisch zu {@link #loadNewPuzzleAsync()} (gleiches {@code PuzzlePanel}-Feedback).
      */
     public void loadEndgamePuzzleAsync(EndgameTheme theme) {
+        currentEndgameTheme = theme;
         loadPuzzleAsync(() -> repository.randomByThemes(theme.theme1(), theme.theme2()), "endgame-puzzle-loader");
+    }
+
+    /**
+     * Lädt das nächste Puzzle passend zum aktuellen Modus: bei aktivem Endspiel-Thema
+     * eines desselben Themas, sonst adaptiv um das User-Rating. Für das Auto-Advance
+     * nach einem gelösten Puzzle.
+     */
+    private void loadNextPuzzleAsync() {
+        if (currentEndgameTheme != null) {
+            loadEndgamePuzzleAsync(currentEndgameTheme);
+        } else {
+            loadNewPuzzleAsync();
+        }
     }
 
     private void loadPuzzleAsync(Supplier<Optional<Puzzle>> puzzleSupplier, String threadName) {
@@ -188,7 +212,7 @@ public class PuzzleSession {
             // Kurze Pause, damit die grüne Aufblink-Animation in der UI sichtbar durchlaufen
             // kann, bevor das Brett auf das nächste Puzzle wechselt.
             PauseTransition pause = new PauseTransition(AUTO_ADVANCE_DELAY);
-            pause.setOnFinished(e -> loadNewPuzzleAsync());
+            pause.setOnFinished(e -> loadNextPuzzleAsync());
             pause.play();
         }
     }
