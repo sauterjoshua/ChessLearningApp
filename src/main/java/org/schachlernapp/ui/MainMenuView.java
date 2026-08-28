@@ -3,6 +3,7 @@ package org.schachlernapp.ui;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.Separator;
 import javafx.scene.layout.VBox;
 
 /**
@@ -16,12 +17,14 @@ import javafx.scene.layout.VBox;
  *
  * <p>M11: Der "Eröffnung"-Button ist jetzt aktiv (führt zu {@link AppView#OPENING_SELECT}). Der
  * "Zughinweis anzeigen"-Schalter des Eröffnungstrainers sitzt bewusst NICHT hier, sondern beim
- * Brett in {@link org.schachlernapp.ui.opening.OpeningPanel}.</p>
+ * Brett in {@link org.schachlernapp.ui.opening.OpeningPanel}. Unten schließt ein
+ * "Programm beenden"-Button die App (löst regulär {@code Main.stop()} aus - Fortschritt wird
+ * gespeichert).</p>
  */
 public class MainMenuView extends VBox {
 
     public MainMenuView(Runnable onNewGame, Runnable onNewPuzzle, Runnable onEndgame, Runnable onOpening,
-                        Runnable onImportGame) {
+                        Runnable onImportGame, Runnable onQuit) {
         setSpacing(8);
         setPadding(new Insets(8));
         setAlignment(Pos.CENTER);
@@ -33,8 +36,10 @@ public class MainMenuView extends VBox {
         Button openingButton = new Button("Eröffnung");
         Button endgameButton = new Button("Endgame");
         Button importGameButton = new Button("Partie importieren");
+        Button quitButton = new Button("Programm beenden");
 
-        for (Button button : new Button[] {newGameButton, newPuzzleButton, openingButton, endgameButton, importGameButton}) {
+        for (Button button : new Button[] {newGameButton, newPuzzleButton, openingButton, endgameButton,
+                importGameButton, quitButton}) {
             button.setMaxWidth(Double.MAX_VALUE);
         }
 
@@ -43,7 +48,9 @@ public class MainMenuView extends VBox {
         openingButton.setOnAction(e -> onOpening.run());
         endgameButton.setOnAction(e -> onEndgame.run());
         importGameButton.setOnAction(e -> onImportGame.run());
+        quitButton.setOnAction(e -> onQuit.run());
 
-        getChildren().addAll(newGameButton, newPuzzleButton, openingButton, endgameButton, importGameButton);
+        getChildren().addAll(newGameButton, newPuzzleButton, openingButton, endgameButton, importGameButton,
+                new Separator(), quitButton);
     }
 }

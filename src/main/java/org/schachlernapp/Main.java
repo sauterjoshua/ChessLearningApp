@@ -189,7 +189,8 @@ public class Main extends Application {
                     this::handleNewPuzzleRequested,
                     () -> switchTo(AppView.ENDGAME_SELECT),
                     this::handleOpeningRequested,
-                    this::handleImportGameRequested);
+                    this::handleImportGameRequested,
+                    Platform::exit);
             case ENDGAME_SELECT -> new EndgameMenuView(
                     this::handleEndgameThemeSelected,
                     () -> switchTo(AppView.MAIN_MENU));
