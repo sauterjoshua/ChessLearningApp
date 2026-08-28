@@ -7,5 +7,6 @@ package org.schachlernapp.ui;
 public enum AppView {
     MAIN_MENU,
     ENDGAME_SELECT,
+    OPENING_SELECT,
     GAME
 }

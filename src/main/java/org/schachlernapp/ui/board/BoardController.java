@@ -107,6 +107,17 @@ public class BoardController {
         return applyMove(from, to, ChangeReason.PUZZLE);
     }
 
+    /**
+     * Wie {@link #applyPuzzleMove}, aber für programmatisch gespielte Eröffnungs-Buchzüge
+     * ({@code OpeningTrainerService}: Setup-Zug + automatische Gegenzüge aus der ECO-Linie).
+     * Feuert {@link ChangeReason#OPENING}, damit diese Züge nicht in die Blunder-Auswertung
+     * einfließen (aber - im Gegensatz zu {@link ChangeReason#PUZZLE} - von {@code BoardView}
+     * animiert werden).
+     */
+    public boolean applyOpeningMove(Square from, Square to) {
+        return applyMove(from, to, ChangeReason.OPENING);
+    }
+
     private boolean applyMove(Square from, Square to, ChangeReason reason) {
         Move chosen = null;
         for (Move move : board.legalMoves()) {

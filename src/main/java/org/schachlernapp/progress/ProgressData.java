@@ -23,12 +23,23 @@ public class ProgressData {
     private Map<String, Integer> learnModeTally = new HashMap<>();
     private String lastLessonId;
 
+    /** M11: "Zughinweis anzeigen"-Schalter des Eröffnungstrainers (Hint-Pfeil auf dem Brett). */
+    private boolean showHintArrow = false;
+
     public int getPuzzleRating() {
         return puzzleRating;
     }
 
     public void setPuzzleRating(int puzzleRating) {
         this.puzzleRating = puzzleRating;
+    }
+
+    public boolean isShowHintArrow() {
+        return showHintArrow;
+    }
+
+    public void setShowHintArrow(boolean showHintArrow) {
+        this.showHintArrow = showHintArrow;
     }
 
     public Map<String, Integer> getLearnModeTally() {

@@ -33,6 +33,14 @@
     -fx-border-width: 3;
 }
 
+/* Generischer Hinweis-Pfeil (Overlay auf dem Brett, M11 - Eröffnungstrainer).
+   Gilt für Schaft (Line, -fx-stroke) und Pfeilspitze (Polygon, -fx-fill) gleichermaßen. */
+.hint-arrow {
+    -fx-stroke: #15781b;
+    -fx-fill: #15781b;
+    -fx-opacity: 0.7;
+}
+
 .board-coordinate {
     -fx-font-size: 11px;
     -fx-font-weight: bold;

@@ -14,10 +14,18 @@ package org.schachlernapp.ui.board;
  * <p>{@link #REVIEW} (M8): Sprung zu einer Stellung aus einer importierten/analysierten
  * Partie (Klick auf einen Zug/Punkt im Eval-Graph). Fällt aus demselben Grund wie
  * {@link #RESET}/{@link #PUZZLE} nicht in die Blunder-Auswertung.</p>
+ *
+ * <p>{@link #OPENING} (M11): programmatisch vom {@code OpeningTrainerService} gespielte
+ * Buchzüge (Setup-Zug + automatische Gegenzüge aus der ECO-Linie). Fällt für
+ * {@code EvaluationController} in denselben "kein moverSide"-Zweig wie {@link #RESET}/
+ * {@link #PUZZLE}, sodass diese Züge nie als User-Blunder gewertet werden. Wird von
+ * {@code BoardView} - anders als die übrigen Nicht-{@link #MOVE}-Gründe - wie ein echter
+ * Zug animiert.</p>
  */
 public enum ChangeReason {
     MOVE,
     RESET,
     PUZZLE,
-    REVIEW
+    REVIEW,
+    OPENING
 }

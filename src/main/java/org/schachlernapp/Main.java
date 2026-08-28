@@ -10,6 +10,12 @@ import org.schachlernapp.engine.EngineEvaluator;
 import org.schachlernapp.engine.StockfishEngine;
 import org.schachlernapp.progress.ProgressData;
 import org.schachlernapp.progress.ProgressStore;
+import org.schachlernapp.opening.Opening;
+import org.schachlernapp.opening.OpeningFeedback;
+import org.schachlernapp.opening.OpeningOutcome;
+import org.schachlernapp.opening.OpeningRepository;
+import org.schachlernapp.opening.OpeningRole;
+import org.schachlernapp.opening.OpeningTrainerService;
 import org.schachlernapp.puzzle.EndgameTheme;
 import org.schachlernapp.review.GameImportService;
 import org.schachlernapp.review.GameReview;
@@ -19,7 +25,9 @@ import org.schachlernapp.review.ImportedGame;
 import org.schachlernapp.ui.AppView;
 import org.schachlernapp.ui.EndgameMenuView;
 import org.schachlernapp.ui.MainMenuView;
+import org.schachlernapp.ui.OpeningMenuView;
 import org.schachlernapp.ui.UiAlerts;
+import org.schachlernapp.ui.opening.OpeningPanel;
 import org.schachlernapp.ui.board.BoardController;
 import org.schachlernapp.ui.board.BoardView;
 import org.schachlernapp.ui.board.ChangeReason;
@@ -44,12 +52,14 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -86,6 +96,8 @@ public class Main extends Application {
     private volatile EngineEvaluator engineEvaluator;
     private volatile PuzzleRepository puzzleRepository;
     private volatile PuzzleSession puzzleSession;
+    private volatile OpeningRepository openingRepository;
+    private volatile OpeningTrainerService openingTrainerService;
     private volatile LearnModeController learnModeController;
     private volatile ProgressData progress;
 
@@ -95,8 +107,17 @@ public class Main extends Application {
     private EvalBar evalBar;
     private LearnModePanel learnModePanel;
     private PuzzlePanel puzzlePanel;
+    private OpeningPanel openingPanel;
+    private Button openingNextButton;
     private ReviewPanel reviewPanel;
     private GameImportService gameImportService;
+
+    // M11: "Playlist" der Varianten der aktuell gewählten Eröffnungs-Familie, für den
+    // "Weiter zur nächsten Variante"-Button nach durchgespielter Buchlinie.
+    private List<Opening> openingPlaylist = List.of();
+    private int openingPlaylistIndex = -1;
+    private OpeningRole currentOpeningRole = OpeningRole.PLAY_AS;
+    private Side currentOpeningColor = Side.WHITE;
 
     @Override
     public void start(Stage primaryStage) {
@@ -115,6 +136,12 @@ public class Main extends Application {
         evalBar.getStyleClass().add("eval-pane");
         learnModePanel = new LearnModePanel();
         puzzlePanel = new PuzzlePanel();
+        openingPanel = new OpeningPanel();
+        openingPanel.setOnHintToggle(this::handleHintToggle);
+        openingNextButton = new Button();
+        openingNextButton.setVisible(false);
+        openingNextButton.setManaged(false);
+        openingNextButton.setOnAction(e -> handleOpeningNextRequested());
         reviewPanel = new ReviewPanel();
         gameImportService = new GameImportService();
 
@@ -161,9 +188,14 @@ public class Main extends Application {
                     this::handleNewGameRequested,
                     this::handleNewPuzzleRequested,
                     () -> switchTo(AppView.ENDGAME_SELECT),
+                    this::handleOpeningRequested,
                     this::handleImportGameRequested);
             case ENDGAME_SELECT -> new EndgameMenuView(
                     this::handleEndgameThemeSelected,
+                    () -> switchTo(AppView.MAIN_MENU));
+            case OPENING_SELECT -> new OpeningMenuView(
+                    openingRepository,
+                    this::handleOpeningSelected,
                     () -> switchTo(AppView.MAIN_MENU));
             case GAME -> buildGameView();
         };
@@ -197,6 +229,108 @@ public class Main extends Application {
         switchTo(AppView.GAME);
     }
 
+    /** M11: öffnet die Eröffnungs-Auswahl - nur wenn die {@code openings}-DB verfügbar ist. */
+    private void handleOpeningRequested() {
+        if (openingRepository == null) {
+            UiAlerts.showError("Eröffnungstrainer nicht verfügbar",
+                    "Die Eröffnungsdaten konnten nicht geladen werden. Der Eröffnungstrainer "
+                            + "steht in dieser Sitzung nicht zur Verfügung.");
+            return;
+        }
+        switchTo(AppView.OPENING_SELECT);
+    }
+
+    /**
+     * M11: startet eine Eröffnungstrainer-Sitzung mit der im {@link OpeningMenuView} getroffenen
+     * Auswahl. Merkt sich die komplette Varianten-Liste der Familie (+ Rolle/Farbe) für den
+     * "Weiter zur nächsten Variante"-Button.
+     */
+    private void handleOpeningSelected(String family, Opening opening, OpeningRole role, Side userColor) {
+        List<Opening> variations = openingRepository != null
+                ? openingRepository.variationsByFamily(family) : List.of();
+        int index = indexOfVariation(variations, opening);
+        if (index < 0) { // Auswahl nicht in der frisch geladenen Liste - dann eben Playlist der Länge 1
+            variations = List.of(opening);
+            index = 0;
+        }
+        this.openingPlaylist = variations;
+        this.openingPlaylistIndex = index;
+        this.currentOpeningRole = role;
+        this.currentOpeningColor = userColor;
+
+        startOpeningVariation(opening);
+        switchTo(AppView.GAME);
+    }
+
+    /** M11: "Weiter"-Button nach durchgespielter Buchlinie - startet die nächste Variante derselben Eröffnung. */
+    private void handleOpeningNextRequested() {
+        if (!hasNextVariation()) {
+            return;
+        }
+        openingPlaylistIndex++;
+        startOpeningVariation(openingPlaylist.get(openingPlaylistIndex));
+    }
+
+    private void startOpeningVariation(Opening opening) {
+        openingNextButton.setVisible(false);
+        openingNextButton.setManaged(false);
+        OpeningTrainerService trainer = openingTrainerService;
+        if (trainer != null) {
+            trainer.start(opening, currentOpeningRole, currentOpeningColor);
+        }
+        openingPanel.showOpening(opening);
+    }
+
+    /**
+     * M11: reagiert auf Trainer-Feedback für die "Weiter"-Navigation. Bei durchgespielter Buchlinie
+     * ({@link OpeningOutcome#BOOK_FINISHED}) wird - falls es eine nächste Variante gibt - der
+     * "Weiter"-Button mit deren Namen eingeblendet, sonst wieder versteckt.
+     */
+    private void handleOpeningFeedback(OpeningFeedback feedback) {
+        if (feedback.outcome() == OpeningOutcome.BOOK_FINISHED && hasNextVariation()) {
+            Opening next = openingPlaylist.get(openingPlaylistIndex + 1);
+            openingNextButton.setText("Weiter ▶  " + next.variation());
+            openingNextButton.setVisible(true);
+            openingNextButton.setManaged(true);
+            openingPanel.showNextVariation(next);
+        } else {
+            openingNextButton.setVisible(false);
+            openingNextButton.setManaged(false);
+            if (feedback.outcome() == OpeningOutcome.BOOK_FINISHED) {
+                openingPanel.showNextVariation(null); // letzte Variante der Eröffnung
+            }
+        }
+    }
+
+    private boolean hasNextVariation() {
+        return openingPlaylistIndex >= 0 && openingPlaylistIndex + 1 < openingPlaylist.size();
+    }
+
+    private static int indexOfVariation(List<Opening> variations, Opening target) {
+        for (int i = 0; i < variations.size(); i++) {
+            if (variations.get(i).name().equals(target.name())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * M11: "Zughinweis anzeigen"-Checkbox (in {@link OpeningPanel} beim Brett). Persistiert den Wert
+     * (M7) und reicht ihn an eine laufende Eröffnungstrainer-Sitzung durch.
+     */
+    private void handleHintToggle(boolean enabled) {
+        ProgressData data = this.progress;
+        if (data != null) {
+            data.setShowHintArrow(enabled);
+        }
+        OpeningTrainerService trainer = openingTrainerService;
+        if (trainer != null) {
+            trainer.setHintEnabled(enabled);
+        }
+        saveProgress();
+    }
+
     /** Wie bisher der Import-Handler in {@code OptionsPanel}; öffnet zusätzlich die Spielansicht. */
     private void handleImportGameRequested() {
         ImportGameDialog dialog = new ImportGameDialog(gameImportService);
@@ -215,9 +349,11 @@ public class Main extends Application {
         // Feedback/Ratings (LearnModePanel + PuzzlePanel) in einer Leiste ÜBER dem Brett.
         HBox.setHgrow(learnModePanel, Priority.ALWAYS);
         HBox.setHgrow(puzzlePanel, Priority.ALWAYS);
+        HBox.setHgrow(openingPanel, Priority.ALWAYS);
         learnModePanel.setMaxWidth(Double.MAX_VALUE);
         puzzlePanel.setMaxWidth(Double.MAX_VALUE);
-        HBox feedbackRow = new HBox(8, learnModePanel, puzzlePanel);
+        openingPanel.setMaxWidth(Double.MAX_VALUE);
+        HBox feedbackRow = new HBox(8, learnModePanel, puzzlePanel, openingPanel);
 
         // M9-Redesign: Zugliste bekommt eine eigene, feste Spalte AUSSERHALB von Brett/Menü (statt
         // zwischen beiden gequetscht zu werden). ReviewPanel bleibt Eigentümer der Zugliste (siehe
@@ -232,9 +368,18 @@ public class Main extends Application {
         Button backButton = new Button("Zurück");
         backButton.setOnAction(e -> switchTo(AppView.MAIN_MENU));
 
-        StackPane gameView = new StackPane(gameBox, backButton);
-        StackPane.setAlignment(backButton, Pos.BOTTOM_RIGHT);
-        StackPane.setMargin(backButton, new Insets(8));
+        // M11: der "Weiter"-Button (nächste Eröffnungs-Variante) sitzt links neben "Zurück" und ist
+        // nur sichtbar, wenn eine Buchlinie gerade durchgespielt wurde und es eine nächste Variante
+        // gibt (Sichtbarkeit/Text steuert handleOpeningFeedback). openingNextButton ist ein Feld,
+        // damit sein Zustand einen buildGameView()-Neuaufbau übersteht.
+        HBox bottomRight = new HBox(8, openingNextButton, backButton);
+        bottomRight.setAlignment(Pos.CENTER_RIGHT);
+        bottomRight.setPickOnBounds(false); // Klicks in den leeren Bereich sollen durchgehen
+        bottomRight.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+
+        StackPane gameView = new StackPane(gameBox, bottomRight);
+        StackPane.setAlignment(bottomRight, Pos.BOTTOM_RIGHT);
+        StackPane.setMargin(bottomRight, new Insets(8));
         return gameView;
     }
 
@@ -313,6 +458,34 @@ public class Main extends Application {
                     "Die Puzzle-Datenbank (" + puzzleDbPath + ") konnte nicht geöffnet werden:\n" + e.getMessage()
                             + "\n\nDas Puzzle-Feature bleibt deaktiviert. Brett, Eval-Balken und Lern-Modus "
                             + "funktionieren trotzdem uneingeschränkt.");
+        }
+
+        // M11: Eröffnungstrainer. Braucht selbst kein Stockfish, hängt aber hier hinter dem
+        // Engine-Start (wie das Puzzle-Feature), da erst danach der evaluationController für die
+        // Blunder-Unterdrückung während der Buchlinie existiert.
+        String openingDbPath = OpeningRepository.resolveDefaultPath();
+        try {
+            OpeningRepository openingRepo = new OpeningRepository(openingDbPath);
+            this.openingRepository = openingRepo;
+
+            OpeningTrainerService trainer = new OpeningTrainerService(boardController, evaluationController);
+            trainer.setHintArrowHandlers(boardView::showHintArrow, boardView::clearHintArrow);
+            trainer.addTrainingStartedListener(userColor -> boardView.setFlipped(userColor == Side.BLACK));
+            trainer.addFeedbackListener(feedback -> {
+                openingPanel.showFeedback(feedback);
+                handleOpeningFeedback(feedback);
+            });
+            trainer.setHintEnabled(progress.isShowHintArrow());
+            Platform.runLater(() -> openingPanel.setHintEnabled(progress.isShowHintArrow()));
+            this.openingTrainerService = trainer;
+            System.out.println("[openings] Eröffnungstrainer bereit (DB: " + openingDbPath + ")");
+        } catch (Exception e) {
+            System.out.println("[openings] FEHLER: Eröffnungs-DB \"" + openingDbPath + "\" nicht verfügbar ("
+                    + e.getMessage() + "). Eröffnungstrainer bleibt deaktiviert.");
+            UiAlerts.showError("Eröffnungsdaten nicht verfügbar",
+                    "Die Eröffnungs-Datenbank (" + openingDbPath + ") konnte nicht geöffnet/aufgebaut werden:\n"
+                            + e.getMessage() + "\n\nDer Eröffnungstrainer bleibt deaktiviert. Alle anderen "
+                            + "Funktionen sind davon nicht betroffen.");
         }
 
         evaluationController.evaluateCurrentPosition();
@@ -443,6 +616,9 @@ public class Main extends Application {
         }
         if (puzzleRepository != null) {
             puzzleRepository.close();
+        }
+        if (openingRepository != null) {
+            openingRepository.close();
         }
     }
 

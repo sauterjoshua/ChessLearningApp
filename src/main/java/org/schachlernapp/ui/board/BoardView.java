@@ -15,6 +15,9 @@ import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.RowConstraints;
+import javafx.scene.shape.Line;
+import javafx.scene.shape.Polygon;
+import javafx.scene.shape.StrokeLineCap;
 import javafx.util.Duration;
 
 import java.util.EnumMap;
@@ -49,6 +52,8 @@ public class BoardView extends Pane {
     private final Map<Square, SquareView> squares = new EnumMap<>(Square.class);
     private final GridPane grid = new GridPane();
     private final Pane dragLayer = new Pane();
+    /** Transparente Overlay-Ebene für den generischen Hinweis-Pfeil ({@link #showHintArrow}) - deckungsgleich mit {@link #dragLayer}. */
+    private final Pane hintLayer = new Pane();
     private final Label[] fileLabels = new Label[8]; // Index = File.ordinal() (0=A..7=H)
     private final Label[] rankLabels = new Label[8]; // Index = Rank.ordinal() (0=Rang1..7=Rang8)
     private final BoardController controller;
@@ -57,6 +62,11 @@ public class BoardView extends Pane {
 
     private double squareSize = INITIAL_SQUARE_SIZE;
     private boolean flipped;
+
+    // Aktuell angezeigter Hinweis-Pfeil (beide null = kein Pfeil). Als Square-Paar gehalten statt
+    // als fertige Nodes, damit layoutChildren() den Pfeil bei jeder Größenänderung neu zeichnen kann.
+    private Square hintFrom;
+    private Square hintTo;
 
     // Zustand der laufenden Zug-Animation (siehe animateMove()) - alle drei zusammen
     // null oder alle drei gesetzt.
@@ -72,7 +82,8 @@ public class BoardView extends Pane {
         buildGrid();
         buildLabels();
         dragLayer.setMouseTransparent(true); // Klicks sollen bei den SquareViews im Grid ankommen
-        getChildren().addAll(grid, dragLayer);
+        hintLayer.setMouseTransparent(true);
+        getChildren().addAll(grid, hintLayer, dragLayer);
         for (Label label : fileLabels) {
             getChildren().add(label);
         }
@@ -177,6 +188,12 @@ public class BoardView extends Pane {
         dragLayer.setMaxSize(side, side);
         dragLayer.resizeRelocate(LABEL_MARGIN, 0, side, side);
 
+        hintLayer.setMinSize(side, side);
+        hintLayer.setPrefSize(side, side);
+        hintLayer.setMaxSize(side, side);
+        hintLayer.resizeRelocate(LABEL_MARGIN, 0, side, side);
+        drawHintArrow(); // Feldgröße kann sich geändert haben - Pfeil neu aufbauen
+
         for (int fileIndex = 0; fileIndex < 8; fileIndex++) {
             int col = columnForFile(File.allFiles[fileIndex]);
             fileLabels[fileIndex].resizeRelocate(LABEL_MARGIN + col * squareSize, side, squareSize, LABEL_MARGIN);
@@ -189,17 +206,75 @@ public class BoardView extends Pane {
 
     /**
      * Reagiert auf {@link BoardController#addPositionChangedListener}: bei einem echten
-     * Spielzug ({@link ChangeReason#MOVE}) gleitet die Figur animiert von Start- zu
-     * Zielfeld ({@link #animateMove()}), bei allen anderen Gründen (Reset, Puzzle-Setup,
-     * Partie-Review-Sprung) springt die Stellung sofort um ({@link #render()}).
+     * Spielzug ({@link ChangeReason#MOVE}) oder einem Eröffnungs-Buchzug
+     * ({@link ChangeReason#OPENING}) gleitet die Figur animiert von Start- zu Zielfeld
+     * ({@link #animateMove()}), bei allen anderen Gründen (Reset, Puzzle-Setup,
+     * Partie-Review-Sprung) springt die Stellung sofort um ({@link #render()}). Ein
+     * evtl. sichtbarer Hinweis-Pfeil wird bei JEDER Änderung entfernt.
      */
     private void handlePositionChanged(ChangeReason reason) {
-        if (reason == ChangeReason.MOVE) {
+        // Der Hinweis-Pfeil gehört immer nur zur aktuellen Stellung - bei JEDER Änderung
+        // (eigener Zug, Gegenzug, Reset, Puzzle, Review) verschwindet er, unabhängig vom Feature.
+        clearHintArrow();
+        if (reason == ChangeReason.MOVE || reason == ChangeReason.OPENING) {
             animateMove();
         } else {
             cancelActiveMoveAnimation();
             render();
         }
+    }
+
+    /**
+     * Zeigt einen generischen Hinweis-Pfeil von {@code from} nach {@code to} auf der
+     * {@link #hintLayer}-Overlay-Ebene (dieselbe Technik/Geometrie wie die schwebende Figur
+     * der Zug-Animation). Ersetzt einen ggf. schon sichtbaren Pfeil. Aktuell vom
+     * {@code OpeningTrainerService} genutzt, bewusst feature-neutral gehalten.
+     */
+    public void showHintArrow(Square from, Square to) {
+        this.hintFrom = from;
+        this.hintTo = to;
+        drawHintArrow();
+    }
+
+    /** Entfernt den Hinweis-Pfeil, falls einer sichtbar ist. Wird zusätzlich bei jeder Positionsänderung automatisch aufgerufen. */
+    public void clearHintArrow() {
+        this.hintFrom = null;
+        this.hintTo = null;
+        hintLayer.getChildren().clear();
+    }
+
+    private void drawHintArrow() {
+        hintLayer.getChildren().clear();
+        if (hintFrom == null || hintTo == null || hintFrom == hintTo || squareSize <= 0) {
+            return;
+        }
+        double fromX = columnFor(hintFrom) * squareSize + squareSize / 2;
+        double fromY = rowFor(hintFrom) * squareSize + squareSize / 2;
+        double toX = columnFor(hintTo) * squareSize + squareSize / 2;
+        double toY = rowFor(hintTo) * squareSize + squareSize / 2;
+
+        double angle = Math.atan2(toY - fromY, toX - fromX);
+        double headLength = squareSize * 0.36;
+        double headHalfWidth = squareSize * 0.17;
+
+        double shaftEndX = toX - headLength * 0.85 * Math.cos(angle);
+        double shaftEndY = toY - headLength * 0.85 * Math.sin(angle);
+        Line shaft = new Line(fromX, fromY, shaftEndX, shaftEndY);
+        shaft.setStrokeWidth(Math.max(3, squareSize * 0.14));
+        shaft.setStrokeLineCap(StrokeLineCap.ROUND);
+        shaft.getStyleClass().add("hint-arrow");
+
+        double baseX = toX - headLength * Math.cos(angle);
+        double baseY = toY - headLength * Math.sin(angle);
+        double perpX = Math.cos(angle + Math.PI / 2);
+        double perpY = Math.sin(angle + Math.PI / 2);
+        Polygon head = new Polygon(
+                toX, toY,
+                baseX + headHalfWidth * perpX, baseY + headHalfWidth * perpY,
+                baseX - headHalfWidth * perpX, baseY - headHalfWidth * perpY);
+        head.getStyleClass().add("hint-arrow");
+
+        hintLayer.getChildren().addAll(shaft, head);
     }
 
     private void render() {

@@ -6,7 +6,13 @@ dependency-reduced-pom.xml
 ### Schach-Lernapp: generierte/lokale Daten ###
 # Lichess-Puzzle-CSV (~1GB) und die daraus importierte SQLite-DB - beides lokal
 # per PuzzleCsvImporter reproduzierbar, gehört nicht ins Repo.
-/data/
+# /data/* statt /data/, damit die Ausnahme unten greift (bei ausgeschlossenem
+# Verzeichnis kann eine Datei darin nicht re-inkludiert werden).
+/data/*
+# Ausnahme: die kleinen ECO-Eröffnungs-TSVs (lichess-org/chess-openings) werden
+# als Seed-Daten mitgeliefert und beim ersten Start in die "openings"-Tabelle importiert.
+!/data/openings/
+!/data/openings/*.tsv
 puzzles.db
 cp.txt
 
