@@ -1,15 +1,21 @@
 package org.schachlernapp.ui.board;
 
 import com.github.bhlangonijr.chesslib.File;
+import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.Rank;
 import com.github.bhlangonijr.chesslib.Square;
+import com.github.bhlangonijr.chesslib.move.Move;
+import javafx.animation.Interpolator;
+import javafx.animation.TranslateTransition;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.RowConstraints;
+import javafx.util.Duration;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -47,8 +53,16 @@ public class BoardView extends Pane {
     private final Label[] rankLabels = new Label[8]; // Index = Rank.ordinal() (0=Rang1..7=Rang8)
     private final BoardController controller;
 
+    private static final Duration MOVE_ANIMATION_DURATION = Duration.millis(110);
+
     private double squareSize = INITIAL_SQUARE_SIZE;
     private boolean flipped;
+
+    // Zustand der laufenden Zug-Animation (siehe animateMove()) - alle drei zusammen
+    // null oder alle drei gesetzt.
+    private TranslateTransition activeMoveAnimation;
+    private ImageView floatingMovePiece;
+    private SquareView animatingTargetSquare;
 
     public BoardView(BoardController controller) {
         this.controller = controller;
@@ -66,7 +80,7 @@ public class BoardView extends Pane {
             getChildren().add(label);
         }
 
-        controller.addPositionChangedListener(reason -> render());
+        controller.addPositionChangedListener(this::handlePositionChanged);
         new BoardDragHandler(this, controller);
         render();
     }
@@ -173,11 +187,107 @@ public class BoardView extends Pane {
         }
     }
 
+    /**
+     * Reagiert auf {@link BoardController#addPositionChangedListener}: bei einem echten
+     * Spielzug ({@link ChangeReason#MOVE}) gleitet die Figur animiert von Start- zu
+     * Zielfeld ({@link #animateMove()}), bei allen anderen Gründen (Reset, Puzzle-Setup,
+     * Partie-Review-Sprung) springt die Stellung sofort um ({@link #render()}).
+     */
+    private void handlePositionChanged(ChangeReason reason) {
+        if (reason == ChangeReason.MOVE) {
+            animateMove();
+        } else {
+            cancelActiveMoveAnimation();
+            render();
+        }
+    }
+
     private void render() {
         for (Map.Entry<Square, SquareView> entry : squares.entrySet()) {
             entry.getValue().setPiece(controller.pieceAt(entry.getKey()));
         }
         updateCheckHighlight();
+    }
+
+    /**
+     * Animiert den zuletzt gespielten Zug: aktualisiert zunächst wie {@link #render()} alle
+     * Felder (inkl. Zielfeld auf das Endbild), blendet das Zielfeld dann kurz aus und lässt
+     * stattdessen eine schwebende {@link ImageView} auf der {@link #dragLayer} (dieselbe
+     * Technik wie {@link BoardDragHandler} beim manuellen Ziehen) vom Start- zum Zielfeld
+     * gleiten. Danach wird die Ziel-{@link SquareView} wieder sichtbar geschaltet.
+     *
+     * <p>Bei Rochade wird nur die König-Figur animiert (der Turm springt sofort mit
+     * {@link #render()} um) - eine zweite gleichzeitige Animation für den Turm ist für den
+     * gewünschten Effekt nicht nötig.</p>
+     */
+    private void animateMove() {
+        cancelActiveMoveAnimation();
+
+        Move move = controller.lastMove();
+        Piece movedPiece = move == null ? null : controller.pieceAt(move.getTo());
+        if (move == null || movedPiece == null || movedPiece == Piece.NONE || squareSize <= 0) {
+            render();
+            return;
+        }
+
+        Square from = move.getFrom();
+        Square to = move.getTo();
+        render();
+
+        SquareView targetView = squares.get(to);
+        targetView.setPieceVisible(false);
+
+        double size = Math.max(8, squareSize * SquareView.PIECE_SIZE_RATIO);
+        ImageView floating = new ImageView(PieceImages.of(movedPiece));
+        floating.setFitWidth(size);
+        floating.setFitHeight(size);
+        floating.setPreserveRatio(true);
+        floating.setMouseTransparent(true);
+
+        double fromX = columnFor(from) * squareSize + (squareSize - size) / 2;
+        double fromY = rowFor(from) * squareSize + (squareSize - size) / 2;
+        double toX = columnFor(to) * squareSize + (squareSize - size) / 2;
+        double toY = rowFor(to) * squareSize + (squareSize - size) / 2;
+        floating.setLayoutX(fromX);
+        floating.setLayoutY(fromY);
+        dragLayer.getChildren().add(floating);
+
+        TranslateTransition transition = new TranslateTransition(MOVE_ANIMATION_DURATION, floating);
+        transition.setInterpolator(Interpolator.EASE_OUT);
+        transition.setToX(toX - fromX);
+        transition.setToY(toY - fromY);
+        transition.setOnFinished(event -> finishMoveAnimation(floating, targetView));
+
+        floatingMovePiece = floating;
+        animatingTargetSquare = targetView;
+        activeMoveAnimation = transition;
+        transition.play();
+    }
+
+    private void finishMoveAnimation(ImageView floating, SquareView targetView) {
+        dragLayer.getChildren().remove(floating);
+        targetView.setPieceVisible(true);
+        if (floatingMovePiece == floating) {
+            activeMoveAnimation = null;
+            floatingMovePiece = null;
+            animatingTargetSquare = null;
+        }
+    }
+
+    /** Bricht eine laufende Zug-Animation ab und stellt den sichtbaren Zustand sofort her - nötig, falls ein neuer Zug (oder Reset/Puzzle) eintrifft, bevor die vorherige Animation fertig ist. */
+    private void cancelActiveMoveAnimation() {
+        if (activeMoveAnimation != null) {
+            activeMoveAnimation.stop();
+            activeMoveAnimation = null;
+        }
+        if (floatingMovePiece != null) {
+            dragLayer.getChildren().remove(floatingMovePiece);
+            floatingMovePiece = null;
+        }
+        if (animatingTargetSquare != null) {
+            animatingTargetSquare.setPieceVisible(true);
+            animatingTargetSquare = null;
+        }
     }
 
     private void updateCheckHighlight() {
